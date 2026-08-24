@@ -16,10 +16,14 @@ namespace CommerceHub.Web.Middleware
         {
             //işlemi yap..
             var stopwatch = Stopwatch.StartNew();
-            //bir sonraki middleware'e git
+          
             var isSuccess = true;
+
+            //eğer bir sonraki işlemlerden birinde hata olursa stopwatch'un yine de çalışmasını istiyorsak...
+            //Durdurma ve yazma finally içinde olmalı:
             try
             {
+                //bir sonraki middleware'e git. 
                 await next(context);
             }
             catch
