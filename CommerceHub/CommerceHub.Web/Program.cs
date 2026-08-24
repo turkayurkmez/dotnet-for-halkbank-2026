@@ -1,23 +1,31 @@
 
 //.net core, web sunucusu olarak platform bağımsız Kestrel'i yazdılar!!!!!
 //İstek gelir -> Kestrel dinler -> HttpContext nesnesi oluşturur  -> Geri kalanı backend'in işidir.
+using CommerceHub.Web.Middleware;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
 var app = builder.Build();
 
-app.Use(async (context, next) =>
-{
+//app.Use(async (context, next) =>
+//{
 
-    Console.WriteLine($"[İSTEK GELDİ] -> {context.Request.Method} - {context.Request.Path}");
-    await next();
-    Console.WriteLine($"[YANIT ÜRETİLDİ] -> {context.Response.StatusCode}");
+//    Console.WriteLine($"[İSTEK GELDİ] -> {context.Request.Method} - {context.Request.Path}");
+//    await next();
+//    Console.WriteLine($"[YANIT ÜRETİLDİ] -> {context.Response.StatusCode}");
     
 
-});
+//});
+
+app.UseMiddleware<RequestTiminingMiddleware>();
+
+//app.UseRouting();
+//app.UseAuthentication();//kim? nereye?
 
 
+app.MapGet("/", () => Results.Ok("istek, endpoint'e ulaştı!"));
 app.MapControllers();
 app.Run();
 
