@@ -15,10 +15,11 @@ var app = builder.Build();
 //    Console.WriteLine($"[İSTEK GELDİ] -> {context.Request.Method} - {context.Request.Path}");
 //    await next();
 //    Console.WriteLine($"[YANIT ÜRETİLDİ] -> {context.Response.StatusCode}");
-    
+
 
 //});
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<RequestTiminingMiddleware>();
 
 //app.UseRouting();
@@ -26,6 +27,11 @@ app.UseMiddleware<RequestTiminingMiddleware>();
 
 
 app.MapGet("/", () => Results.Ok("istek, endpoint'e ulaştı!"));
+app.MapGet("/hata", () =>
+{
+
+    throw new NotImplementedException("Bu endpoint henüz tamamlanmadı!");
+}); 
 app.MapControllers();
 app.Run();
 

@@ -17,11 +17,25 @@ namespace CommerceHub.Web.Middleware
             //işlemi yap..
             var stopwatch = Stopwatch.StartNew();
             //bir sonraki middleware'e git
-            await next(context);
-            stopwatch.Stop();
-            var elapsed = stopwatch.ElapsedMilliseconds;
-            logger.LogInformation($"[TIMING] -> {context.Request.Path} adresine gelen {context.Request.Method} isteği, {elapsed} ms sürdü.");
-            //bir sonraki bittikten sonra gerekirse işleme devam et.
+            var isSuccess = true;
+            try
+            {
+                await next(context);
+            }
+            catch
+            {
+                isSuccess = false;
+                throw;
+            }
+            finally
+            {
+                stopwatch.Stop();
+                var status = isSuccess ? "BAŞARILI" : "BAŞARISIZ";
+                var elapsed = stopwatch.ElapsedMilliseconds;
+                logger.LogInformation($"[TIMING] ({status}) -> {context.Request.Path} adresine gelen {context.Request.Method} isteği, {elapsed} ms sürdü.");
+                //bir sonraki bittikten sonra gerekirse işleme devam et.
+            }
+
         }
     }
 }
