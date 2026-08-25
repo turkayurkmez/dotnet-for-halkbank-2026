@@ -126,14 +126,46 @@ public ProductsController(ProductService productService)
 - `ProductService` → iş mantığı koordinasyonu
 - `ProductRepository` → veri erişimi (in-memory liste)
 - `ProductPriceCalculator` → fiyat hesaplama algoritması
-- `EmailSender` → e-posta gönderimi
+- `NotificationService` → bildirim gönderim koordinasyonu (eski: `EmailSender`)
 
 ```
 ProductService
 ├── ProductRepository       → veriyi getirir
 ├── ProductPriceCalculator  → fiyatı hesaplar
-└── EmailSender             → tedarikçiye mail atar
+└── NotificationService     → bildirim kanallarını koordine eder
 ```
+
+---
+
+### 9. Open/Closed Principle (OCP) & Interface Kullanımı
+- **Bir sınıf gelişime açık, değişime kapalı olmalıdır**
+- `INotification` arayüzü ile bildirim kanalları soyutlandı
+- Her kanal kendi sınıfında implement edildi: `EmailNotification`, `SMSNotification`, `WhatsAppNotification`
+- `NotificationService.Notify(INotification, string)` metodu, hangi kanalın kullanıldığını bilmez; sadece `Send()` eylemini çağırır
+- Yeni bir bildirim kanalı eklemek için **mevcut kodu değiştirmeye gerek yoktur**, yeni bir sınıf eklemek yeterlidir
+
+```csharp
+public interface INotification
+{
+    void Send(string message);
+}
+
+// Yeni kanal eklemek: mevcut kodu değiştirmeden yeni sınıf yaz
+public class WhatsAppNotification : INotification
+{
+    public void Send(string message) => Console.WriteLine($"Whatsapp: {message}");
+}
+```
+
+```csharp
+// NotificationService hangi kanalın kullanıldığını bilmiyor, sadece eylemi (Send) biliyor:
+public void Notify(INotification notification, string message)
+{
+    notification.Send(message);
+}
+```
+
+> **OCP ihlali örneği (kaçınılan pattern):** `switch/case` ile her yeni kanal için mevcut kodu değiştirmek zorunda kalmak.
 
 ---
 
@@ -176,7 +208,9 @@ CommerceHub.Web/
 │   ├── ProductService.cs              # İş mantığı koordinasyonu
 │   ├── ProductRepository.cs           # Veri erişim katmanı
 │   ├── ProductPriceCalculator.cs      # Fiyat hesaplama
-│   └── EmailSender.cs                 # E-posta gönderimi
+│   ├── NotificationService.cs         # Bildirim gönderim koordinasyonu (OCP)
+│   ├── INotification.cs               # Bildirim arayüzü + Email/SMS/WhatsApp implementasyonları
+│   └── EmailSender.cs                 # (Eski) e-posta gönderici
 ├── Settings/
 │   └── CommerceSettings.cs            # Options pattern modeli
 ├── appsettings.json                    # Kestrel, logging, uygulama ayarları
