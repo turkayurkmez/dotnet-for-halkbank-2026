@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+//Binding (IOptions Binding) : 
 builder.Services.Configure<CommerceSettings>(builder.Configuration.GetSection("CommerceSettings"));
 
 var app = builder.Build();
@@ -28,6 +29,7 @@ var app = builder.Build();
 
 
 //});
+
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<RequestTiminingMiddleware>();
