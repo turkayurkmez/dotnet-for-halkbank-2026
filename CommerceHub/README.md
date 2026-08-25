@@ -167,6 +167,51 @@ public void Notify(INotification notification, string message)
 
 > **OCP ihlali örneği (kaçınılan pattern):** `switch/case` ile her yeni kanal için mevcut kodu değiştirmek zorunda kalmak.
 
+- Bildirim implementasyonları ayrı dosyalara taşındı: `EmailNotification.cs`, `SMSNotification.cs`, `WhatsAppNotification.cs`
+
+---
+
+### 10. Liskov Substitution Principle (LSP)
+- **Alt sınıflar, üst sınıfların yerine sorunsuzca kullanılabilmelidir**
+- `GiftOrder` sınıfı `Order`'dan türetildiğinde `GetTotal()` metodu `NotSupportedException` fırlatıyordu → **LSP ihlali**
+- Çözüm: `GiftOrder`, `Order`'dan **miras almaktan çıkarıldı**; bunun yerine yalnızca fiyatlanabilir siparişler için `IPricableOrder` arayüzü tanımlandı
+- `OrderService.PrintTotal(List<IPricableOrder>)` yalnızca fiyatlandırılabilen siparişlerle çalışır
+
+```csharp
+public interface IPricableOrder
+{
+    decimal GetTotal();
+}
+
+public class Order : IPricableOrder
+{
+    public List<decimal> ItemPrices { get; set; }
+    public decimal GetTotal() => ItemPrices.Sum();
+}
+
+public class GiftOrder // Order'dan miras almıyor — LSP ihlali önlendi
+{
+    public string Note { get; set; }
+}
+```
+
+```csharp
+// OrderService yalnızca IPricableOrder üzerinden çalışır:
+public void PrintTotal(List<IPricableOrder> orders)
+{
+    foreach (var item in orders)
+        Console.WriteLine($"Toplam: {item.GetTotal()}");
+}
+```
+
+---
+
+### 11. Order Modeli & OrderService
+- `Order` modeli: `ItemPrices` listesi üzerinden toplam tutar hesaplar
+- `GiftOrder`: fiyatlandırma dışında tutulan hediye siparişi modeli
+- `OrderService`: `IPricableOrder` listesi üzerinden tüm sipariş toplamlarını yazdırır
+- `ProductsController`'a `OrderService` DI ile enjekte edildi; `GET /api/products/GetTotal` endpoint'i eklendi
+
 ---
 
 ### 9. MVC Controller Yapısı
@@ -203,13 +248,19 @@ CommerceHub.Web/
 │   ├── ExceptionHandlingMiddleware.cs  # Merkezi hata yönetimi
 │   └── RequestTiminingMiddleware.cs    # İstek süre ölçümü
 ├── Models/
-│   └── Product.cs                     # Ürün modeli
+│   ├── Product.cs                     # Ürün modeli
+│   ├── Order.cs                       # Sipariş modeli + IPricableOrder arayüzü + GiftOrder
+│   └── (GiftOrder Order.cs içinde)
 ├── Services/
 │   ├── ProductService.cs              # İş mantığı koordinasyonu
 │   ├── ProductRepository.cs           # Veri erişim katmanı
 │   ├── ProductPriceCalculator.cs      # Fiyat hesaplama
+│   ├── OrderService.cs                # Sipariş toplam hesaplama (LSP uyumlu)
 │   ├── NotificationService.cs         # Bildirim gönderim koordinasyonu (OCP)
-│   ├── INotification.cs               # Bildirim arayüzü + Email/SMS/WhatsApp implementasyonları
+│   ├── INotification.cs               # Bildirim arayüzü
+│   ├── EmailNotification.cs           # E-posta bildirimi
+│   ├── SMSNotification.cs             # SMS bildirimi
+│   ├── WhatsAppNotification.cs        # WhatsApp bildirimi
 │   └── EmailSender.cs                 # (Eski) e-posta gönderici
 ├── Settings/
 │   └── CommerceSettings.cs            # Options pattern modeli
@@ -234,6 +285,7 @@ Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 | `GET /ayarlar`               | `CommerceSettings` değerlerini döner             |
 | `GET /api/products`          | Tüm ürünleri indirimli fiyatlarıyla listeler     |
 | `GET /api/products/{id}`     | Belirli bir ürünün hesaplanmış fiyatını döner    |
+| `GET /api/products/GetTotal` | Sipariş toplamlarını hesaplar ve yazdırır        |
 
 ---
 
