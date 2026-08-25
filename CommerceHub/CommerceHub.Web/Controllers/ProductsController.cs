@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using CommerceHub.Web.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CommerceHub.Web.Controllers
@@ -7,10 +8,29 @@ namespace CommerceHub.Web.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
+
+        private readonly ProductService _productService;
+
+        public ProductsController(ProductService productService)
+        {
+            _productService = productService;
+        }
         [HttpGet]
         public IActionResult GetProducts()
         {
-            return Ok(new { message = "Burası daha sonra ürünleri döndürecek!" });
+            
+            //ProductService productService = new ProductService();
+            var products = _productService.GetProducts();
+            products.ForEach(p => p.BasePrice = _productService.GetFinalPrice(p.Id));
+            return Ok(products);
+        }
+
+        [HttpGet("{id:int}")]
+        public IActionResult GetFinalPriceOf(int id)
+        {
+            //ProductService productService = new ProductService();
+            var price = _productService.GetFinalPrice(id);
+            return Ok(price);
         }
     }
 }

@@ -3,6 +3,7 @@
 //İstek gelir -> Kestrel dinler -> HttpContext nesnesi oluşturur  -> Geri kalanı backend'in işidir.
 using CommerceHub.Web.Exceptions;
 using CommerceHub.Web.Middleware;
+using CommerceHub.Web.Services;
 using CommerceHub.Web.Settings;
 using Microsoft.Extensions.Options;
 
@@ -12,6 +13,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 //Binding (IOptions Binding) : 
 builder.Services.Configure<CommerceSettings>(builder.Configuration.GetSection("CommerceSettings"));
+
+builder.Services.AddScoped<ProductService>();
 
 var app = builder.Build();
 
