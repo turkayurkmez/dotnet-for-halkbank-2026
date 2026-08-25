@@ -1,19 +1,24 @@
 ﻿namespace CommerceHub.Web.Models
 {
-    public class Order
+
+    public interface IPricableOrder
+    {
+        decimal GetTotal();
+    }
+    public class Order : IPricableOrder
     {
         public List<decimal> ItemPrices { get; set; }
         public virtual decimal GetTotal()=> ItemPrices.Sum();
     }
 
 
-    public class GiftOrder : Order
+    public class GiftOrder //: Order
     {
         public string Note { get; set; }
-        public override decimal GetTotal()
-        {
-            throw new NotSupportedException("Hediye siparişlerde toplam tutar hesaplanmıyor!");
-        }
+        //public override decimal GetTotal()
+        //{
+        //    throw new NotSupportedException("Hediye siparişlerde toplam tutar hesaplanmıyor!");
+        //}
     }
 
     /*

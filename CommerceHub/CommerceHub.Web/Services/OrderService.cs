@@ -4,7 +4,7 @@ namespace CommerceHub.Web.Services
 {
     public class OrderService
     {
-        public void PrintTotal(List<Order> orders)
+        public void PrintTotal(List<IPricableOrder> orders)
         {
             foreach (var item in orders)
             {

@@ -23,7 +23,7 @@ namespace CommerceHub.Web.Controllers
         [HttpGet]
         public IActionResult GetProducts()
         {
-            
+
             //ProductService productService = new ProductService();
             var products = _productService.GetProducts();
             products.ForEach(p => p.BasePrice = _productService.GetFinalPrice(p.Id));
@@ -41,10 +41,10 @@ namespace CommerceHub.Web.Controllers
         [HttpGet("GetTotal")]
         public IActionResult GetOrderTotal()
         {
-            var orders = new List<Order>()
+            var orders = new List<IPricableOrder>()
             {
                 new Order{ ItemPrices = new(){1300,2500}},
-                new GiftOrder{ ItemPrices = new(){ 3000,5000 }, Note="Doğum...." }
+               // new GiftOrder{ ItemPrices = new(){ 3000,5000 }, Note="Doğum...." }
             };
 
             _orderService.PrintTotal(orders);
