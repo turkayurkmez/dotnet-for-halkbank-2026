@@ -15,6 +15,7 @@ builder.Services.AddControllers();
 builder.Services.Configure<CommerceSettings>(builder.Configuration.GetSection("CommerceSettings"));
 
 builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<NotificationService>();
 
 var app = builder.Build();
 

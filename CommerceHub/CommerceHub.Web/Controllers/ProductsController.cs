@@ -22,6 +22,7 @@ namespace CommerceHub.Web.Controllers
             //ProductService productService = new ProductService();
             var products = _productService.GetProducts();
             products.ForEach(p => p.BasePrice = _productService.GetFinalPrice(p.Id));
+            _productService.SendMailToSupplier();
             return Ok(products);
         }
 

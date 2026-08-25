@@ -13,14 +13,14 @@ namespace CommerceHub.Web.Services
 
         private ProductRepository _productRepository;
         private ProductPriceCalculator _calculator;
-        private EmailSender _sender;
+        private NotificationService _notification;
         private ILogger<ProductService> _logger;
 
-        public ProductService(ILogger<ProductService> logger)
+        public ProductService(ILogger<ProductService> logger, NotificationService notificationService)
         {
             _productRepository = new ProductRepository();
             _calculator = new ProductPriceCalculator();
-            _sender = new EmailSender();
+            _notification = notificationService;
             _logger = logger;
         }
 
@@ -52,7 +52,11 @@ namespace CommerceHub.Web.Services
 
         public void SendMailToSupplier()
         {
-            _sender.SendEmailToSupplier();
+            EmailNotification emailNotification = new EmailNotification();
+            WhatsAppNotification whatsAppNotification = new WhatsAppNotification();
+            SMSNotification sMSNotification = new SMSNotification();
+            _notification.Notify(sMSNotification,"Test mesajı");
+            _logger.LogInformation("Gönderim yapıldı");
         }
 
 
