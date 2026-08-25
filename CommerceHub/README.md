@@ -105,11 +105,56 @@ app.MapGet("/ayarlar", (IOptions<CommerceSettings> options) =>
 ### 7. Dependency Injection (DI)
 - Constructor injection ile `RequestDelegate` ve `ILogger<T>` bağımlılıklarının çözülmesi
 - Middleware bağımlılıklarının **Singleton** yaşam döngüsüne sahip olması
+- `builder.Services.AddScoped<T>()` ile servislerin DI container'a kaydedilmesi
+- Controller'larda constructor injection ile servis kullanımı (`ProductService`)
+
+```csharp
+builder.Services.AddScoped<ProductService>();
+```
+
+```csharp
+public ProductsController(ProductService productService)
+{
+    _productService = productService;
+}
+```
 
 ---
 
-### 8. Logging
+### 8. Single Responsibility Principle (SRP) & Servis Katmanı Ayrımı
+- Büyük bir sınıfın sorumluluklarının **küçük, odaklı sınıflara** bölünmesi
+- `ProductService` → iş mantığı koordinasyonu
+- `ProductRepository` → veri erişimi (in-memory liste)
+- `ProductPriceCalculator` → fiyat hesaplama algoritması
+- `EmailSender` → e-posta gönderimi
+
+```
+ProductService
+├── ProductRepository       → veriyi getirir
+├── ProductPriceCalculator  → fiyatı hesaplar
+└── EmailSender             → tedarikçiye mail atar
+```
+
+---
+
+### 9. MVC Controller Yapısı
+- `ControllerBase` türetmesi ile API controller oluşturma
+- `[ApiController]` ve `[Route]` attribute'ları
+- `[HttpGet]`, `[HttpGet("{id:int}")]` ile route tanımlama
+- `IActionResult` / `Ok(...)` ile HTTP yanıtı döndürme
+
+```csharp
+[Route("api/[controller]")]
+[ApiController]
+public class ProductsController : ControllerBase { ... }
+```
+
+---
+
+### 10. Logging
 - `ILogger<T>` arayüzü ile yapılandırılmış loglama
+- `LogWarning` ile ürün bulunamadığında uyarı loglama
+- `LogInformation` ile hesaplanan fiyatı loglama
 - `appsettings.json` üzerinden log seviyesi yapılandırması (`Information`, `Warning`)
 
 ---
@@ -118,15 +163,24 @@ app.MapGet("/ayarlar", (IOptions<CommerceSettings> options) =>
 
 ```
 CommerceHub.Web/
+├── Controllers/
+│   └── ProductsController.cs          # MVC API controller
 ├── Exceptions/
-│   └── NotFoundException.cs          # Özel exception sınıfı
+│   └── NotFoundException.cs           # Özel exception sınıfı
 ├── Middleware/
-│   ├── ExceptionHandlingMiddleware.cs # Merkezi hata yönetimi
-│   └── RequestTiminingMiddleware.cs   # İstek süre ölçümü
+│   ├── ExceptionHandlingMiddleware.cs  # Merkezi hata yönetimi
+│   └── RequestTiminingMiddleware.cs    # İstek süre ölçümü
+├── Models/
+│   └── Product.cs                     # Ürün modeli
+├── Services/
+│   ├── ProductService.cs              # İş mantığı koordinasyonu
+│   ├── ProductRepository.cs           # Veri erişim katmanı
+│   ├── ProductPriceCalculator.cs      # Fiyat hesaplama
+│   └── EmailSender.cs                 # E-posta gönderimi
 ├── Settings/
-│   └── CommerceSettings.cs           # Options pattern modeli
-├── appsettings.json                   # Kestrel, logging, uygulama ayarları
-└── Program.cs                         # Uygulama giriş noktası
+│   └── CommerceSettings.cs            # Options pattern modeli
+├── appsettings.json                    # Kestrel, logging, uygulama ayarları
+└── Program.cs                          # Uygulama giriş noktası
 ```
 
 ---
@@ -139,18 +193,21 @@ dotnet run --project CommerceHub.Web
 
 Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 
-| Endpoint   | Açıklama                              |
-|------------|---------------------------------------|
-| `GET /`    | Temel endpoint yanıtı                 |
-| `GET /hata`| `NotFoundException` fırlatır (test)   |
-| `GET /ayarlar` | `CommerceSettings` değerlerini döner |
+| Endpoint                     | Açıklama                                         |
+|------------------------------|--------------------------------------------------|
+| `GET /`                      | Temel endpoint yanıtı                            |
+| `GET /hata`                  | `NotFoundException` fırlatır (test)              |
+| `GET /ayarlar`               | `CommerceSettings` değerlerini döner             |
+| `GET /api/products`          | Tüm ürünleri indirimli fiyatlarıyla listeler     |
+| `GET /api/products/{id}`     | Belirli bir ürünün hesaplanmış fiyatını döner    |
 
 ---
 
 ## 🛠 Kullanılan Teknolojiler
 
 - **.NET 10**
-- **ASP.NET Core Minimal API**
+- **ASP.NET Core Minimal API & MVC**
 - **Kestrel**
 - **Microsoft.Extensions.Options**
 - **Microsoft.Extensions.Logging**
+- **Microsoft.Extensions.DependencyInjection**
