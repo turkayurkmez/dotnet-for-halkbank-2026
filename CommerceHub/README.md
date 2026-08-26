@@ -228,7 +228,51 @@ public class ProductsController : ControllerBase { ... }
 
 ---
 
-### 10. Logging
+### 12. Interface Segregation Principle (ISP)
+- **Bir sınıf, kullanmadığı metotları içeren arayüzleri implement etmek zorunda kalmamalıdır**
+- Büyük `IProductRepository` arayüzü yerine küçük, odaklı arayüzler tanımlandı:
+
+| Arayüz | Sorumluluk |
+|---|---|
+| `IProductReader` | `GetProduct`, `GetProducts` — sadece okuma |
+| `IProductWriter` | `Add`, `Update` — sadece yazma |
+| `IProductImporter` | `ImportFromExcel` — dışarıdan içe aktarma |
+| `IProductExporter` | `ExportToCsv` — dışarıya aktarma |
+
+- `ProductService` yalnızca okumaya ihtiyaç duyduğu için `IProductReader` aldı, tüm repository arayüzünü değil
+
+```csharp
+// ISP uyumlu: Sadece ihtiyaç duyulan arayüzü alır
+public ProductService(..., IProductReader productReader, ...)
+```
+
+---
+
+### 13. Dependency Inversion Principle (DIP) & Arayüz Tabanlı DI
+- **Üst katmanlar, alt katmanlara değil; soyutlamalara bağımlı olmalıdır**
+- Tüm servisler artık somut sınıflara değil **arayüzlere** bağımlı
+- `ProductService` içinde `new ProductRepository()` / `new ProductPriceCalculator()` gibi doğrudan nesne oluşturma **kaldırıldı**
+- Bağımlılıklar constructor injection ile dışarıdan verilir
+
+```csharp
+// Önce (DIP ihlali):
+_productRepository = new ProductRepository(); // somut sınıfa bağımlı
+
+// Sonra (DIP uyumlu):
+public ProductService(IProductReader productReader, IProductPriceCalculator calculator, ...)
+```
+
+- `Program.cs`'de arayüz → implementasyon eşleşmeleri DI container'a kaydedildi:
+
+```csharp
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IProductReader, ProductRepository>();
+builder.Services.AddScoped<IProductPriceCalculator, ProductPriceCalculator>();
+```
+
+- `ProductsController` da artık `IProductService` ve `IOrderService` arayüzleri üzerinden çalışır
 - `ILogger<T>` arayüzü ile yapılandırılmış loglama
 - `LogWarning` ile ürün bulunamadığında uyarı loglama
 - `LogInformation` ile hesaplanan fiyatı loglama
@@ -252,12 +296,17 @@ CommerceHub.Web/
 │   ├── Order.cs                       # Sipariş modeli + IPricableOrder arayüzü + GiftOrder
 │   └── (GiftOrder Order.cs içinde)
 ├── Services/
-│   ├── ProductService.cs              # İş mantığı koordinasyonu
-│   ├── ProductRepository.cs           # Veri erişim katmanı
-│   ├── ProductPriceCalculator.cs      # Fiyat hesaplama
-│   ├── OrderService.cs                # Sipariş toplam hesaplama (LSP uyumlu)
-│   ├── NotificationService.cs         # Bildirim gönderim koordinasyonu (OCP)
-│   ├── INotification.cs               # Bildirim arayüzü
+│   ├── IProductService.cs             # Ürün servis arayüzü
+│   ├── IOrderService.cs               # Sipariş servis arayüzü
+│   ├── INotificationService.cs        # Bildirim servis arayüzü
+│   ├── IProductRepository.cs          # ISP uyumlu alt arayüzler (IProductReader, IProductWriter, IProductImporter, IProductExporter)
+│   ├── IProductPriceCalculator.cs     # Fiyat hesaplama arayüzü
+│   ├── ProductService.cs              # İş mantığı koordinasyonu (IProductService impl.)
+│   ├── ProductRepository.cs           # Veri erişim katmanı (IProductReader impl.)
+│   ├── ProductPriceCalculator.cs      # Fiyat hesaplama (IProductPriceCalculator impl.)
+│   ├── OrderService.cs                # Sipariş toplam hesaplama (IOrderService impl.)
+│   ├── NotificationService.cs         # Bildirim koordinasyonu (INotificationService impl.)
+│   ├── INotification.cs               # Bildirim kanal arayüzü
 │   ├── EmailNotification.cs           # E-posta bildirimi
 │   ├── SMSNotification.cs             # SMS bildirimi
 │   ├── WhatsAppNotification.cs        # WhatsApp bildirimi
