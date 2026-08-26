@@ -23,6 +23,12 @@ namespace CommerceHub.Web.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<Product>()
+                        .HasOne(p=>p.Category)
+                        .WithMany(c=>c.Products)
+                        .HasForeignKey(p=>p.CategoryId)
+                        .OnDelete(DeleteBehavior.Restrict);
+
             modelBuilder.Entity<Category>().HasData(new Category { Id = 1, Name = "Bilgisayar" });
             modelBuilder.Entity<Product>().HasData(
                 new Product { Id = 1, Name = "Kablosuz Klavye", Description = "Logitech Bluetooth", BasePrice = 2000, CategoryId = 1, DiscountRate = 0.25, IsOnSale = true, StockCount = 100 },

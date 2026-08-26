@@ -1,7 +1,9 @@
-﻿using CommerceHub.Web.Models;
+﻿using CommerceHub.Web.Data;
+using CommerceHub.Web.Models;
 using CommerceHub.Web.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace CommerceHub.Web.Controllers
 {
@@ -28,7 +30,7 @@ namespace CommerceHub.Web.Controllers
             //ProductService productService = new ProductService();
             var products = _productService.GetProducts();//GetProducts()'ın nasıl çalıştığını BİLMİYOR!
             products.ForEach(p => p.BasePrice = _productService.GetFinalPrice(p.Id));
-            _productService.SendMailToSupplier();
+            //_productService.SendMailToSupplier();
             return Ok(products);
         }
 
@@ -52,5 +54,37 @@ namespace CommerceHub.Web.Controllers
 
             return Ok(new { message = "Sonuç konsol'da" });
         }
+
+        [HttpGet("Demo/{id}")]
+        public IActionResult ExplicitLoadingDemo(int id, CommerceDbContext commerceDbContext)
+        {
+            var product = commerceDbContext.Products.Find(id);
+            if (product is null)
+            {
+                return NotFound();
+            }
+
+            commerceDbContext.Entry(product).Reference(p => p.Category).Load();
+            return Ok(product);
+        }
+
+        [HttpGet("/Get/{id:int}")]
+        public IActionResult GetById(int id)
+        {
+            var product = _productService.GetProduct(id);
+            return Ok(product);
+        }
+
+
+        [HttpPost]
+        public IActionResult CreateNewProduct(Product product)
+        {
+            _productService.Create(product);
+            return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+
+        }
+
+
+
     }
 }

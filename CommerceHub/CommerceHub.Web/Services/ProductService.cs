@@ -70,6 +70,26 @@ namespace CommerceHub.Web.Services
             _productWriter.Add(product);
         }
 
+        public void Create(Product product)
+        {
+            _productWriter.Add(product);
+        }
+
+        public void Update(Product product)
+        {
+            _productWriter.Update(product);
+        }
+
+        public void Delete(int id)
+        {
+            _productWriter.Delete(id);
+        }
+
+        public Product GetProduct(int id)
+        {
+            return _productReader.GetProduct(id);
+        }
+
 
 
 

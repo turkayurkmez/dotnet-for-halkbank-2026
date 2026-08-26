@@ -1,5 +1,6 @@
 ﻿using CommerceHub.Web.Data;
 using CommerceHub.Web.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace CommerceHub.Web.Services
 {
@@ -36,7 +37,8 @@ namespace CommerceHub.Web.Services
 
         public IEnumerable<Product> GetProducts()
         {
-            return _dbContext.Products.ToList();
+            //Eager Loading:
+            return _dbContext.Products.Include(p=>p.Category).ToList();
         }
 
         public void Update(Product product)

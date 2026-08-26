@@ -8,11 +8,13 @@ using CommerceHub.Web.Services;
 using CommerceHub.Web.Settings;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Text.Json.Serialization;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+                .AddJsonOptions(option => option.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 //Binding (IOptions Binding) : 
 builder.Services.Configure<CommerceSettings>(builder.Configuration.GetSection("CommerceSettings"));
 

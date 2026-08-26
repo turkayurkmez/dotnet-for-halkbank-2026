@@ -6,6 +6,11 @@ namespace CommerceHub.Web.Services
     {
         decimal GetFinalPrice(int id);
         List<Product> GetProducts();
+        Product GetProduct(int id);
         void SendMailToSupplier();
+
+        void Create(Product product);
+        void Update(Product product);
+        void Delete(int id);
     }
 }
