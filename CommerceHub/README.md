@@ -280,6 +280,39 @@ builder.Services.AddScoped<IProductPriceCalculator, ProductPriceCalculator>();
 
 ---
 
+### 14. Entity Framework Core & Veritabanı Katmanı
+- **EF Core** ile SQL Server veritabanı entegrasyonu
+- `CommerceDbContext` sınıfı ile `DbSet<Product>` ve `DbSet<Category>` tanımı
+- `OnModelCreating` içinde **Fluent API** ile ilişki yapılandırması (`HasOne / WithMany / HasForeignKey`)
+- `OnDelete(DeleteBehavior.Restrict)` ile kısıtlı silme kuralı
+- `HasData` ile **Seed Data** (başlangıç verisi) tanımı
+- `EFProductRepository` sınıfı `IProductReader` ve `IProductWriter` arayüzlerini implement eder
+- **Eager Loading**: `Include(p => p.Category)` ile ilişkili veriyi tek sorguda çekme
+- **Explicit Loading**: `Entry(...).Reference(...).LoadAsync()` ile ilişkiyi ihtiyaç anında yükleme
+- Migration tabanlı şema yönetimi: `add-migration`, `update-database`
+- `appsettings.json` içindeki `ConnectionStrings:CommerceHubDb` ile bağlantı bilgisi
+
+```csharp
+// Eager Loading
+return _dbContext.Products.Include(p => p.Category).ToList();
+```
+
+```csharp
+// Explicit Loading
+await _dbContext.Entry(product).Reference(p => p.Category).LoadAsync();
+```
+
+```csharp
+// DI kaydı
+builder.Services.AddDbContext<CommerceDbContext>(options =>
+    options.UseSqlServer(connectionString));
+
+builder.Services.AddScoped<IProductReader, EFProductRepository>();
+builder.Services.AddScoped<IProductWriter, EFProductRepository>();
+```
+
+---
+
 ## 🗂 Proje Yapısı
 
 ```
@@ -295,6 +328,9 @@ CommerceHub.Web/
 │   ├── Product.cs                     # Ürün modeli
 │   ├── Order.cs                       # Sipariş modeli + IPricableOrder arayüzü + GiftOrder
 │   └── (GiftOrder Order.cs içinde)
+├── Data/
+│   └── CommerceDbContext.cs            # EF Core DbContext (Products, Categories)
+├── Migrations/                         # EF Core migration dosyaları
 ├── Services/
 │   ├── IProductService.cs             # Ürün servis arayüzü
 │   ├── IOrderService.cs               # Sipariş servis arayüzü
@@ -302,7 +338,8 @@ CommerceHub.Web/
 │   ├── IProductRepository.cs          # ISP uyumlu alt arayüzler (IProductReader, IProductWriter, IProductImporter, IProductExporter)
 │   ├── IProductPriceCalculator.cs     # Fiyat hesaplama arayüzü
 │   ├── ProductService.cs              # İş mantığı koordinasyonu (IProductService impl.)
-│   ├── ProductRepository.cs           # Veri erişim katmanı (IProductReader impl.)
+│   ├── EFProductRepository.cs         # EF Core veri erişim katmanı (IProductReader + IProductWriter impl.)
+│   ├── ProductRepository.cs           # In-memory veri erişim katmanı (eski)
 │   ├── ProductPriceCalculator.cs      # Fiyat hesaplama (IProductPriceCalculator impl.)
 │   ├── OrderService.cs                # Sipariş toplam hesaplama (IOrderService impl.)
 │   ├── NotificationService.cs         # Bildirim koordinasyonu (INotificationService impl.)
@@ -335,6 +372,7 @@ Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 | `GET /api/products`          | Tüm ürünleri indirimli fiyatlarıyla listeler     |
 | `GET /api/products/{id}`     | Belirli bir ürünün hesaplanmış fiyatını döner    |
 | `GET /api/products/GetTotal` | Sipariş toplamlarını hesaplar ve yazdırır        |
+| `GET /api/products/Demo/{id}` | Explicit Loading demo endpoint'i               |
 
 ---
 
@@ -343,6 +381,7 @@ Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 - **.NET 10**
 - **ASP.NET Core Minimal API & MVC**
 - **Kestrel**
+- **Entity Framework Core** (SQL Server)
 - **Microsoft.Extensions.Options**
 - **Microsoft.Extensions.Logging**
 - **Microsoft.Extensions.DependencyInjection**
