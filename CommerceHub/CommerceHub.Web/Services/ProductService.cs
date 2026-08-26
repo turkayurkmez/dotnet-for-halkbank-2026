@@ -15,8 +15,9 @@ namespace CommerceHub.Web.Services
         private IProductPriceCalculator _calculator;
         private INotificationService _notification;
         private ILogger<ProductService> _logger;
+        private readonly IProductWriter _productWriter;
 
-        public ProductService(ILogger<ProductService> logger, INotificationService notificationService, IProductReader productReader, IProductPriceCalculator calculator)
+        public ProductService(ILogger<ProductService> logger, INotificationService notificationService, IProductReader productReader, IProductPriceCalculator calculator, IProductWriter productWriter)
         {
 
             //eğer bağımlı olduğunuc bir nesnenin instance'ını sınıfın içinde alıyorsanız, prensibi ihlal ediyorsunuz...
@@ -27,6 +28,7 @@ namespace CommerceHub.Web.Services
             _notification = notificationService;
             _calculator = calculator;
             _logger = logger;
+            _productWriter = productWriter;
         }
 
         public decimal GetFinalPrice(int id)
@@ -62,6 +64,10 @@ namespace CommerceHub.Web.Services
             SMSNotification sMSNotification = new SMSNotification();
             _notification.Notify(sMSNotification, "Test mesajı");
             _logger.LogInformation("Gönderim yapıldı");
+        }
+
+        public void CreateProduct(Product product) {
+            _productWriter.Add(product);
         }
 
 

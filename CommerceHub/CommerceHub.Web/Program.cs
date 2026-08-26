@@ -1,10 +1,12 @@
 
 //.net core, web sunucusu olarak platform bağımsız Kestrel'i yazdılar!!!!!
 //İstek gelir -> Kestrel dinler -> HttpContext nesnesi oluşturur  -> Geri kalanı backend'in işidir.
+using CommerceHub.Web.Data;
 using CommerceHub.Web.Exceptions;
 using CommerceHub.Web.Middleware;
 using CommerceHub.Web.Services;
 using CommerceHub.Web.Settings;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 
@@ -14,17 +16,17 @@ builder.Services.AddControllers();
 //Binding (IOptions Binding) : 
 builder.Services.Configure<CommerceSettings>(builder.Configuration.GetSection("CommerceSettings"));
 
-
-
-
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<IProductReader, ProductRepository>();
+builder.Services.AddScoped<IProductReader, EFProductRepository>();
+builder.Services.AddScoped<IProductWriter, EFProductRepository>();
 builder.Services.AddScoped<IProductPriceCalculator, ProductPriceCalculator>();
 
+var connectionString = builder.Configuration.GetConnectionString("CommerceHubDb");
 
+builder.Services.AddDbContext<CommerceDbContext>(options => options.UseSqlServer(connectionString));
 
 
 var app = builder.Build();
