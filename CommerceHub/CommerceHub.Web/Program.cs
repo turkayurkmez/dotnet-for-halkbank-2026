@@ -14,9 +14,18 @@ builder.Services.AddControllers();
 //Binding (IOptions Binding) : 
 builder.Services.Configure<CommerceSettings>(builder.Configuration.GetSection("CommerceSettings"));
 
-builder.Services.AddScoped<ProductService>();
-builder.Services.AddScoped<NotificationService>();
-builder.Services.AddScoped<OrderService>();
+
+
+
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IProductReader, ProductRepository>();
+builder.Services.AddScoped<IProductPriceCalculator, ProductPriceCalculator>();
+
+
+
 
 var app = builder.Build();
 

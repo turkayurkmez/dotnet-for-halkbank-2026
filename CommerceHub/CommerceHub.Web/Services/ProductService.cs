@@ -2,7 +2,7 @@
 
 namespace CommerceHub.Web.Services
 {
-    public class ProductService
+    public class ProductService : IProductService
     {
         //private readonly List<Product> _products = new()
         //{
@@ -11,16 +11,21 @@ namespace CommerceHub.Web.Services
 
         //};
 
-        private ProductRepository _productRepository;
-        private ProductPriceCalculator _calculator;
-        private NotificationService _notification;
+        private IProductReader _productReader; //Bu nesneler olmadığında, bu sınıf çalışmaz. Demek ki bunların hepsi dependency
+        private IProductPriceCalculator _calculator;
+        private INotificationService _notification;
         private ILogger<ProductService> _logger;
 
-        public ProductService(ILogger<ProductService> logger, NotificationService notificationService)
+        public ProductService(ILogger<ProductService> logger, INotificationService notificationService, IProductReader productReader, IProductPriceCalculator calculator)
         {
-            _productRepository = new ProductRepository();
-            _calculator = new ProductPriceCalculator();
+
+            //eğer bağımlı olduğunuc bir nesnenin instance'ını sınıfın içinde alıyorsanız, prensibi ihlal ediyorsunuz...
+            //_productRepository = new ProductRepository();
+            //_calculator = new ProductPriceCalculator();
+
+            _productReader = productReader;
             _notification = notificationService;
+            _calculator = calculator;
             _logger = logger;
         }
 
@@ -28,7 +33,7 @@ namespace CommerceHub.Web.Services
         {
             //önce ürünü bul. Eğer indirimdeyse, indirim oranını base fiyata uygula
             //var product = _products.FirstOrDefault(p => p.Id == id);
-            var product = _productRepository.GetProduct(id);
+            var product = _productReader.GetProduct(id);
             if (product is null)
             {
                 // Console.WriteLine($"[ProductService] id'si {id} olan ürün bulunamadı!");
@@ -48,14 +53,14 @@ namespace CommerceHub.Web.Services
             _logger.LogInformation($"{product.Name} için hesaplanan indirimli fiyat: {finalPrice}");
             return finalPrice;
         }
-        public List<Product> GetProducts() => _productRepository.GetProducts();
+        public List<Product> GetProducts() => _productReader.GetProducts().ToList();
 
         public void SendMailToSupplier()
         {
             EmailNotification emailNotification = new EmailNotification();
             WhatsAppNotification whatsAppNotification = new WhatsAppNotification();
             SMSNotification sMSNotification = new SMSNotification();
-            _notification.Notify(sMSNotification,"Test mesajı");
+            _notification.Notify(sMSNotification, "Test mesajı");
             _logger.LogInformation("Gönderim yapıldı");
         }
 

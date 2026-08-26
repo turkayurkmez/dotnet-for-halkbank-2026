@@ -2,7 +2,7 @@
 
 namespace CommerceHub.Web.Services
 {
-    public class OrderService
+    public class OrderService : IOrderService
     {
         public void PrintTotal(List<IPricableOrder> orders)
         {

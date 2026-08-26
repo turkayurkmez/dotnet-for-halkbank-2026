@@ -9,7 +9,7 @@
         SMS,
         WhatsApp
     }
-    public class NotificationService
+    public class NotificationService : INotificationService
     {
         private readonly ILogger<NotificationService> _logger;
 
@@ -32,7 +32,7 @@
         //            break;
         //        default:
         //            throw new NotSupportedException("Desteklenmeyen bildirim...");
-                  
+
         //    }
 
         //}

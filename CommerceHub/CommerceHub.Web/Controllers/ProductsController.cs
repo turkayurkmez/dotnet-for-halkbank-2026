@@ -10,10 +10,10 @@ namespace CommerceHub.Web.Controllers
     public class ProductsController : ControllerBase
     {
 
-        private readonly ProductService _productService;
-        private readonly OrderService _orderService;
+        private readonly IProductService _productService;
+        private readonly IOrderService _orderService;
 
-        public ProductsController(ProductService productService, OrderService orderService)
+        public ProductsController(IProductService productService, IOrderService orderService)
         {
             _productService = productService;
             _orderService = orderService;
@@ -25,7 +25,7 @@ namespace CommerceHub.Web.Controllers
         {
 
             //ProductService productService = new ProductService();
-            var products = _productService.GetProducts();
+            var products = _productService.GetProducts();//GetProducts()'ın nasıl çalıştığını BİLMİYOR!
             products.ForEach(p => p.BasePrice = _productService.GetFinalPrice(p.Id));
             _productService.SendMailToSupplier();
             return Ok(products);

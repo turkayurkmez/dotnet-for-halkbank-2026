@@ -5,7 +5,7 @@ namespace CommerceHub.Web.Services
     /// <summary>
     /// Bu sınıfın sorumluluğu, Product verisi ile (db) doğrudan çalışmaktır.
     /// </summary>
-    public class ProductRepository
+    public class ProductRepository : IProductReader 
     {
         private readonly List<Product> _products = new()
         {
@@ -14,7 +14,7 @@ namespace CommerceHub.Web.Services
 
         };
 
-        public List<Product> GetProducts() => _products;
+        public IEnumerable<Product> GetProducts() => _products;
 
         public Product? GetProduct(int id)
         {
