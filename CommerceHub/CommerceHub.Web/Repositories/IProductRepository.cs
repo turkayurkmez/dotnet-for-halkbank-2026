@@ -20,17 +20,14 @@ namespace CommerceHub.Web.Repositories
 
     public interface IProductReader
     {
-        //Product? GetProduct(int id);
+      
         Task<Product?> GetProductAsync(int id);
-        //IEnumerable<Product> GetProducts();
+       
         Task<IEnumerable<Product>> GetProductsAsync();
     }
 
     public interface IProductWriter
-    {
-        //void Add(Product product);
-        //void Update(Product product);
-       //void Delete(int id);
+    {      
         Task DeleteAsync(int id);
         Task AddAsync(Product product);
         Task UpdateAsync(Product product);

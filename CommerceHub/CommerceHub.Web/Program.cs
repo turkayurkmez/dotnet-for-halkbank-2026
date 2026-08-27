@@ -30,6 +30,7 @@ builder.Services.AddScoped<IProductWriter>(sp=>sp.GetRequiredService<EFProductRe
 
 builder.Services.AddScoped<EFCategoryRepository>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<EFProductReportRepository>();
 
 
 
