@@ -313,12 +313,56 @@ builder.Services.AddScoped<IProductWriter, EFProductRepository>();
 
 ---
 
+### 15. Generic Repository Pattern
+- **Tekrar eden veri erişim kodunu ortadan kaldırmak** için generic repository tasarım deseni uygulandı
+- `IReadRepository<T>` ve `IWriteRepository<T>` arayüzleri ile okuma/yazma operasyonları soyutlandı
+- `GenericRepository<T>` sınıfı, `IEntity` kısıtıyla tüm entity türleri için ortak CRUD operasyonlarını implement eder
+- `EFCategoryRepository` ve `EFProductRepository`, `GenericRepository<T>`'den türeyerek entity'ye özgü davranış ekleyebilir
+- `CategoryService` → `EFCategoryRepository` → `GenericRepository<Category>` zinciri
+- `CategoriesController` ile `GET /api/categories` endpoint'i eklendi
+- Tüm repository operasyonları **async/await** ile asenkron çalışır
+
+```csharp
+// Generic arayüzler
+public interface IReadRepository<T> where T : class, IEntity
+{
+    Task<T> GetByIdAsync(int id);
+    Task<IEnumerable<T>> GetAllAsync();
+}
+
+public interface IWriteRepository<T> where T : class, IEntity
+{
+    Task AddAsync(T entity);
+    void Update(T entity);
+    void Delete(int id);
+    Task<int> SaveChangesAsync();
+}
+```
+
+```csharp
+// Generic implementasyon — tüm entity'ler için tek sınıf
+public class GenericRepository<T> : IReadRepository<T>, IWriteRepository<T>
+    where T : class, IEntity
+{
+    public async Task<IEnumerable<T>> GetAllAsync()
+        => await _dbSet.AsNoTracking().ToListAsync();
+}
+```
+
+```csharp
+// Türetilmiş repository — sadece Category'ye özgü ihtiyaçlar eklenir
+public class EFCategoryRepository : GenericRepository<Category> { ... }
+```
+
+---
+
 ## 🗂 Proje Yapısı
 
 ```
 CommerceHub.Web/
 ├── Controllers/
-│   └── ProductsController.cs          # MVC API controller
+│   ├── ProductsController.cs          # Ürün API controller
+│   └── CategoriesController.cs        # Kategori API controller
 ├── Exceptions/
 │   └── NotFoundException.cs           # Özel exception sınıfı
 ├── Middleware/
@@ -331,15 +375,21 @@ CommerceHub.Web/
 ├── Data/
 │   └── CommerceDbContext.cs            # EF Core DbContext (Products, Categories)
 ├── Migrations/                         # EF Core migration dosyaları
+├── Repositories/
+│   ├── IReadRepository.cs              # Generic okuma arayüzü (IReadRepository<T>, IWriteRepository<T>)
+│   ├── GenericRepository.cs           # Generic EF Core repository implementasyonu
+│   ├── EFProductRepository.cs         # Ürün repository (GenericRepository<Product>)
+│   ├── EFCategoryRepository.cs        # Kategori repository (GenericRepository<Category>)
+│   ├── IProductRepository.cs          # ISP uyumlu ürün arayüzleri
+│   └── ProductRepository.cs          # In-memory ürün repository (eski)
 ├── Services/
 │   ├── IProductService.cs             # Ürün servis arayüzü
 │   ├── IOrderService.cs               # Sipariş servis arayüzü
 │   ├── INotificationService.cs        # Bildirim servis arayüzü
-│   ├── IProductRepository.cs          # ISP uyumlu alt arayüzler (IProductReader, IProductWriter, IProductImporter, IProductExporter)
+│   ├── ICategoryService.cs            # Kategori servis arayüzü
 │   ├── IProductPriceCalculator.cs     # Fiyat hesaplama arayüzü
 │   ├── ProductService.cs              # İş mantığı koordinasyonu (IProductService impl.)
-│   ├── EFProductRepository.cs         # EF Core veri erişim katmanı (IProductReader + IProductWriter impl.)
-│   ├── ProductRepository.cs           # In-memory veri erişim katmanı (eski)
+│   ├── CategoryService.cs             # Kategori iş mantığı (ICategoryService impl.)
 │   ├── ProductPriceCalculator.cs      # Fiyat hesaplama (IProductPriceCalculator impl.)
 │   ├── OrderService.cs                # Sipariş toplam hesaplama (IOrderService impl.)
 │   ├── NotificationService.cs         # Bildirim koordinasyonu (INotificationService impl.)
@@ -373,6 +423,7 @@ Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 | `GET /api/products/{id}`     | Belirli bir ürünün hesaplanmış fiyatını döner    |
 | `GET /api/products/GetTotal` | Sipariş toplamlarını hesaplar ve yazdırır        |
 | `GET /api/products/Demo/{id}` | Explicit Loading demo endpoint'i               |
+| `GET /api/categories`         | Tüm kategorileri listeler (async)               |
 
 ---
 
