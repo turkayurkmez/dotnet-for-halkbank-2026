@@ -4,6 +4,7 @@ using CommerceHub.Web.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
 namespace CommerceHub.Web.Controllers
 {
@@ -24,11 +25,11 @@ namespace CommerceHub.Web.Controllers
 
         }
         [HttpGet]
-        public IActionResult GetProducts()
+        public async Task<IActionResult> GetProducts()
         {
 
             //ProductService productService = new ProductService();
-            var products = _productService.GetProducts();//GetProducts()'ın nasıl çalıştığını BİLMİYOR!
+            var products = await _productService.GetProducts();//GetProducts()'ın nasıl çalıştığını BİLMİYOR!
 
             //maaliyeti düşürmek için, indirim hesaplamaktan vazgeçtik.
            //products.ForEach(p => p.BasePrice = _productService.GetFinalPrice(p.Id));
@@ -36,13 +37,13 @@ namespace CommerceHub.Web.Controllers
             return Ok(products);
         }
 
-        [HttpGet("{id:int}")]
-        public IActionResult GetFinalPriceOf(int id)
-        {
-            //ProductService productService = new ProductService();
-            var price = _productService.GetFinalPrice(id);
-            return Ok(price);
-        }
+        //[HttpGet("{id:int}")]
+        //public IActionResult GetFinalPriceOf(int id)
+        //{
+        //    //ProductService productService = new ProductService();
+        //    var price = _productService.GetFinalPrice(id);
+        //    return Ok(price);
+        //}
         [HttpGet("GetTotal")]
         public IActionResult GetOrderTotal()
         {
@@ -57,37 +58,37 @@ namespace CommerceHub.Web.Controllers
             return Ok(new { message = "Sonuç konsol'da" });
         }
 
-        [HttpGet("Demo/{id}")]
-        public IActionResult ExplicitLoadingDemo(int id, CommerceDbContext commerceDbContext)
-        {
-            var product = commerceDbContext.Products.Find(id);
-            if (product is null)
-            {
-                return NotFound();
-            }
+        //[HttpGet("Demo/{id}")]
+        //public IActionResult ExplicitLoadingDemo(int id, CommerceDbContext commerceDbContext)
+        //{
+        //    var product = commerceDbContext.Products.Find(id);
+        //    if (product is null)
+        //    {
+        //        return NotFound();
+        //    }
 
-            commerceDbContext.Entry(product).Reference(p => p.Category).Load();
-            return Ok(product);
-        }
+        //    commerceDbContext.Entry(product).Reference(p => p.Category).Load();
+        //    return Ok(product);
+        //}
 
         [HttpGet("/Get/{id:int}")]
-        public IActionResult GetById(int id)
+        public async Task<IActionResult> GetById(int id)
         {
-            var product = _productService.GetProduct(id);
+            var product = await _productService.GetProduct(id);
             return Ok(product);
         }
 
 
         [HttpPost]
-        public IActionResult CreateNewProduct(Product product)
+        public async Task<IActionResult> CreateNewProduct(Product product)
         {
-            _productService.Create(product);
+            await _productService.Create(product);
             return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
 
         }
 
         [HttpPut("{id}")]
-        public IActionResult Update(int id, Product product)
+        public async Task<IActionResult> Update(int id, Product product)
         {
             if (id != product.Id)
             {
@@ -95,13 +96,13 @@ namespace CommerceHub.Web.Controllers
 
             }
 
-            var existing = _productService.GetProduct(id);
+            var existing = await _productService.GetProduct(id);
             if (existing is null)
             {
                 return NotFound();
             }
 
-            _productService.Update(product);
+           await _productService.Update(product);
             return NoContent();
 
 
@@ -109,16 +110,49 @@ namespace CommerceHub.Web.Controllers
         }
 
         [HttpDelete("{id}")]
-        public IActionResult Delete(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            var existing = _productService.GetProduct(id);
+            var existing = await _productService.GetProduct(id);
             if (existing is null)
             {
                 return NotFound();                
             }
-            _productService.Delete(id);
+            await _productService.Delete(id);
             return NoContent();
         }
+
+        //[HttpPost("coklu-yavas")]
+        //public IActionResult AddWithSlow(CommerceDbContext context)
+        //{
+        //    var stopWatch = Stopwatch.StartNew();
+        //    for (int i = 0; i < 1000; i++)
+        //    {
+        //        context.Products.Add(new Product { Name = $"TestProduct{i}", BasePrice = 10, CategoryId = 1, StockCount = 0 });
+        //        context.SaveChanges();
+        //    }
+
+        //    stopWatch.Stop();
+        //    return Ok(new { message = $"Geçen süre: {stopWatch.ElapsedMilliseconds} ms geçti" });
+         
+
+        //}
+
+        //[HttpPost("coklu-hizli")]
+        //public IActionResult AddWithFast(CommerceDbContext context)
+        //{
+        //    var stopWatch = Stopwatch.StartNew();
+        //    var products = Enumerable.Range(0, 1000)
+        //                   .Select(i => new Product { Name = $"Test Ürün {i}", BasePrice = 10, CategoryId = 1, StockCount = 0 })
+        //                   .ToList();
+
+        //    context.Products.AddRange(products);
+        //    context.SaveChanges();
+
+        //    stopWatch.Stop();
+        //    return Ok(new { message = $"Geçen süre: {stopWatch.ElapsedMilliseconds} ms geçti" });
+
+
+        //}
 
 
 

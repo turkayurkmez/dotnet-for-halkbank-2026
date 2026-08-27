@@ -5,7 +5,7 @@
     {
         decimal GetTotal();
     }
-    public class Order : IPricableOrder
+    public class Order : IPricableOrder, IEntity
     {
         public List<decimal> ItemPrices { get; set; }
         public virtual decimal GetTotal()=> ItemPrices.Sum();

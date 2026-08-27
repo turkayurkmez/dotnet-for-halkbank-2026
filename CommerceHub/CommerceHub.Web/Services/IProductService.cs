@@ -4,13 +4,13 @@ namespace CommerceHub.Web.Services
 {
     public interface IProductService
     {
-        decimal GetFinalPrice(int id);
-        List<Product> GetProducts();
-        Product GetProduct(int id);
+        Task<decimal> GetFinalPrice(int id);
+        Task<List<Product>> GetProducts();
+        Task<Product> GetProduct(int id);
         void SendMailToSupplier();
 
-        void Create(Product product);
-        void Update(Product product);
-        void Delete(int id);
+        Task Create(Product product);
+        Task Update(Product product);
+        Task Delete(int id);
     }
 }

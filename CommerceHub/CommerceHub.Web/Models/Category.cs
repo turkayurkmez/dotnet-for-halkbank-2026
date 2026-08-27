@@ -1,6 +1,6 @@
 ﻿namespace CommerceHub.Web.Models
 {
-    public class Category
+    public class Category : IEntity
     {
         public int Id { get; set; }
         public string Name { get; set; }

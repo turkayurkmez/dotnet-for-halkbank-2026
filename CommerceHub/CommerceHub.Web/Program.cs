@@ -4,6 +4,7 @@
 using CommerceHub.Web.Data;
 using CommerceHub.Web.Exceptions;
 using CommerceHub.Web.Middleware;
+using CommerceHub.Web.Repositories;
 using CommerceHub.Web.Services;
 using CommerceHub.Web.Settings;
 using Microsoft.EntityFrameworkCore;
@@ -23,8 +24,15 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<IProductReader, EFProductRepository>();
-builder.Services.AddScoped<IProductWriter, EFProductRepository>();
+builder.Services.AddScoped<EFProductRepository>();
+builder.Services.AddScoped<IProductReader>(sp=>sp.GetRequiredService<EFProductRepository>());
+builder.Services.AddScoped<IProductWriter>(sp=>sp.GetRequiredService<EFProductRepository>());
+
+builder.Services.AddScoped<EFCategoryRepository>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+
+
+
 builder.Services.AddScoped<IProductPriceCalculator, ProductPriceCalculator>();
 
 var connectionString = builder.Configuration.GetConnectionString("CommerceHubDb");

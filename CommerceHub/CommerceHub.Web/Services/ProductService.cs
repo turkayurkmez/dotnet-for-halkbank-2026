@@ -1,4 +1,5 @@
 ﻿using CommerceHub.Web.Models;
+using CommerceHub.Web.Repositories;
 
 namespace CommerceHub.Web.Services
 {
@@ -25,17 +26,19 @@ namespace CommerceHub.Web.Services
             //_calculator = new ProductPriceCalculator();
 
             _productReader = productReader;
+            _productWriter = productWriter;
+
             _notification = notificationService;
             _calculator = calculator;
             _logger = logger;
-            _productWriter = productWriter;
+          
         }
 
-        public decimal GetFinalPrice(int id)
+        public async Task<decimal> GetFinalPrice(int id)
         {
             //önce ürünü bul. Eğer indirimdeyse, indirim oranını base fiyata uygula
             //var product = _products.FirstOrDefault(p => p.Id == id);
-            var product = _productReader.GetProduct(id);
+            var product = await _productReader.GetProductAsync(id);
             if (product is null)
             {
                 // Console.WriteLine($"[ProductService] id'si {id} olan ürün bulunamadı!");
@@ -55,7 +58,7 @@ namespace CommerceHub.Web.Services
             _logger.LogInformation($"{product.Name} için hesaplanan indirimli fiyat: {finalPrice}");
             return finalPrice;
         }
-        public List<Product> GetProducts() => _productReader.GetProducts().ToList();
+        public async Task<List<Product>> GetProducts() => (await _productReader.GetProductsAsync()).ToList();
 
         public void SendMailToSupplier()
         {
@@ -64,30 +67,27 @@ namespace CommerceHub.Web.Services
             SMSNotification sMSNotification = new SMSNotification();
             _notification.Notify(sMSNotification, "Test mesajı");
             _logger.LogInformation("Gönderim yapıldı");
-        }
+        }    
 
-        public void CreateProduct(Product product) {
-            _productWriter.Add(product);
-        }
-
-        public void Create(Product product)
+        public async Task Create(Product product)
         {
-            _productWriter.Add(product);
+           await _productWriter.AddAsync(product);
         }
 
-        public void Update(Product product)
+        public async Task Update(Product product)
         {
-            _productWriter.Update(product);
+            await _productWriter.UpdateAsync(product);
         }
 
-        public void Delete(int id)
+        public async Task Delete(int id)
         {
-            _productWriter.Delete(id);
+           await  _productWriter.DeleteAsync(id);
         }
 
-        public Product GetProduct(int id)
+        public async Task<Product> GetProduct(int id)
         {
-            return _productReader.GetProduct(id);
+           return await _productReader.GetProductAsync(id);
+           
         }
 
 
