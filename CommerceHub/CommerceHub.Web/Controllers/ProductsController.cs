@@ -29,7 +29,9 @@ namespace CommerceHub.Web.Controllers
 
             //ProductService productService = new ProductService();
             var products = _productService.GetProducts();//GetProducts()'ın nasıl çalıştığını BİLMİYOR!
-            products.ForEach(p => p.BasePrice = _productService.GetFinalPrice(p.Id));
+
+            //maaliyeti düşürmek için, indirim hesaplamaktan vazgeçtik.
+           //products.ForEach(p => p.BasePrice = _productService.GetFinalPrice(p.Id));
             //_productService.SendMailToSupplier();
             return Ok(products);
         }
@@ -83,6 +85,41 @@ namespace CommerceHub.Web.Controllers
             return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
 
         }
+
+        [HttpPut("{id}")]
+        public IActionResult Update(int id, Product product)
+        {
+            if (id != product.Id)
+            {
+                return BadRequest("URL'deki parametre ile güncel verinin id'si eşleşmiyor!!");
+
+            }
+
+            var existing = _productService.GetProduct(id);
+            if (existing is null)
+            {
+                return NotFound();
+            }
+
+            _productService.Update(product);
+            return NoContent();
+
+
+
+        }
+
+        [HttpDelete("{id}")]
+        public IActionResult Delete(int id)
+        {
+            var existing = _productService.GetProduct(id);
+            if (existing is null)
+            {
+                return NotFound();                
+            }
+            _productService.Delete(id);
+            return NoContent();
+        }
+
 
 
 

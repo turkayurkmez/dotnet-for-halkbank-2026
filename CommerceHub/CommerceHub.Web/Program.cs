@@ -8,6 +8,7 @@ using CommerceHub.Web.Services;
 using CommerceHub.Web.Settings;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Scalar.AspNetCore;
 using System.Text.Json.Serialization;
 
 
@@ -28,8 +29,14 @@ builder.Services.AddScoped<IProductPriceCalculator, ProductPriceCalculator>();
 
 var connectionString = builder.Configuration.GetConnectionString("CommerceHubDb");
 
-builder.Services.AddDbContext<CommerceDbContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddDbContext<CommerceDbContext>(options => options
+                                                              .UseSqlServer(connectionString)
+                                                              .LogTo(Console.WriteLine,LogLevel.Information));
 
+
+
+builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
@@ -37,6 +44,16 @@ var app = builder.Build();
 //Console.WriteLine($"DİKKAT DEĞER: {value}");
 
 
+
+
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
 
 //app.Use(async (context, next) =>
 //{

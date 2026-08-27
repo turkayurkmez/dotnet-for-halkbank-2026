@@ -32,7 +32,7 @@ namespace CommerceHub.Web.Services
 
         public Product? GetProduct(int id)
         {
-           return _dbContext.Products.FirstOrDefault(x => x.Id == id);                
+           return _dbContext.Products.AsNoTracking().FirstOrDefault(x => x.Id == id);                
         }
 
         public IEnumerable<Product> GetProducts()
