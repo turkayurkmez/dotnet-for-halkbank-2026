@@ -356,13 +356,51 @@ public class EFCategoryRepository : GenericRepository<Category> { ... }
 
 ---
 
+### 16. Ham SQL Sorguları & Raporlama
+- `EFProductReportRepository` — koleksiyon üzerinde LINQ ile gruplama yapan rapor repository'si
+- `CategorySummary` DTO — `CategoryName`, `ProductsCount`, `AveragePrice` alanlarını taşıyan sonuç modeli
+- `ReportsController` — üç farklı yaklaşımın performansını kıyaslayan raporlama controller'ı
+
+**Yaklaşım karşılaştırması:**
+
+| Yaklaşım | Açıklama | Avantaj |
+|---|---|---|
+| `EFProductReportRepository` | Tüm veriyi belleğe çeker, LINQ ile gruplar | Basit, test edilebilir |
+| LINQ + `GroupBy` + `Include` | EF Core'un SQL'e çevirdiği saf LINQ sorgusu | Tek sorgu, verimli |
+| `Database.SqlQuery<T>()` | Ham SQL çalıştırır, DTO'ya map eder | Tam kontrol, karmaşık sorgular |
+
+**`FromSqlRaw` yerine `Database.SqlQuery<T>()` kullanılmasının sebebi:**
+- `FromSqlRaw`, `DbSet<T>` üzerinde çalışır ve entity'nin tüm zorunlu kolonlarını (özellikle `Id`) SQL sonucunda bekler
+- `Database.SqlQuery<T>()` herhangi bir DTO'ya map eder, primary key gerektirmez
+
+```csharp
+// ❌ Hatalı: Product entity'si Id kolonunu sonuçta bekler
+commerceDbContext.Products.FromSqlRaw("SELECT c.Name, COUNT(*) ...");
+
+// ✅ Doğru: DTO'ya doğrudan map eder
+await commerceDbContext.Database
+    .SqlQuery<CategorySummary>($@"
+        SELECT c.Name AS CategoryName,
+               COUNT(*) AS ProductsCount,
+               AVG(p.BasePrice) AS AveragePrice
+        FROM Products p
+        LEFT JOIN Categories c ON p.CategoryId = c.Id
+        GROUP BY c.Name")
+    .ToListAsync();
+```
+
+> **Not:** SQL'deki kolon alias'ları (`CategoryName`, `ProductsCount`, `AveragePrice`), DTO property adlarıyla birebir eşleşmelidir.
+
+---
+
 ## 🗂 Proje Yapısı
 
 ```
 CommerceHub.Web/
 ├── Controllers/
 │   ├── ProductsController.cs          # Ürün API controller
-│   └── CategoriesController.cs        # Kategori API controller
+│   ├── CategoriesController.cs        # Kategori API controller
+│   └── ReportsController.cs           # Raporlama API controller (3 farklı sorgulama yaklaşımı)
 ├── Exceptions/
 │   └── NotFoundException.cs           # Özel exception sınıfı
 ├── Middleware/
@@ -370,8 +408,9 @@ CommerceHub.Web/
 │   └── RequestTiminingMiddleware.cs    # İstek süre ölçümü
 ├── Models/
 │   ├── Product.cs                     # Ürün modeli
+│   ├── Category.cs                    # Kategori modeli
 │   ├── Order.cs                       # Sipariş modeli + IPricableOrder arayüzü + GiftOrder
-│   └── (GiftOrder Order.cs içinde)
+│   └── CategorySummary.cs             # Raporlama DTO'su (CategoryName, ProductsCount, AveragePrice)
 ├── Data/
 │   └── CommerceDbContext.cs            # EF Core DbContext (Products, Categories)
 ├── Migrations/                         # EF Core migration dosyaları
@@ -380,8 +419,9 @@ CommerceHub.Web/
 │   ├── GenericRepository.cs           # Generic EF Core repository implementasyonu
 │   ├── EFProductRepository.cs         # Ürün repository (GenericRepository<Product>)
 │   ├── EFCategoryRepository.cs        # Kategori repository (GenericRepository<Category>)
+│   ├── EFProductReportRepository.cs   # Raporlama repository (bellek üzerinde LINQ gruplama)
 │   ├── IProductRepository.cs          # ISP uyumlu ürün arayüzleri
-│   └── ProductRepository.cs          # In-memory ürün repository (eski)
+│   └── ProductRepository.cs           # In-memory ürün repository (eski)
 ├── Services/
 │   ├── IProductService.cs             # Ürün servis arayüzü
 │   ├── IOrderService.cs               # Sipariş servis arayüzü
@@ -424,6 +464,9 @@ Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 | `GET /api/products/GetTotal` | Sipariş toplamlarını hesaplar ve yazdırır        |
 | `GET /api/products/Demo/{id}` | Explicit Loading demo endpoint'i               |
 | `GET /api/categories`         | Tüm kategorileri listeler (async)               |
+| `GET /api/reports/category-summary` | Bellek üzerinde LINQ gruplama ile özet |
+| `GET /api/reports/category-summary-alternatif` | EF Core LINQ `GroupBy` sorgusu |
+| `GET /api/reports/category-summary-sql` | Ham SQL ile `Database.SqlQuery<T>()` |
 
 ---
 
