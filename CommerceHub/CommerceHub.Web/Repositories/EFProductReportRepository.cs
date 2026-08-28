@@ -17,7 +17,7 @@ namespace CommerceHub.Web.Repositories
           var products = await _reader.GetProductsAsync();
 
 
-
+            //DİKKAT!!! Burada, LINQ, SQL'e ÇEVRİLMİYOR!!!!! Doğrudan IEnumerable<Product> üzerinde çalışıyor.
             var summary = products.Where(p => p.Category is not null)
                                   .GroupBy(p => p.Category!.Name)
                                   .Select(r => new CategorySummary

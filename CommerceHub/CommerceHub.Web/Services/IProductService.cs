@@ -12,5 +12,7 @@ namespace CommerceHub.Web.Services
         Task Create(Product product);
         Task Update(Product product);
         Task Delete(int id);
+
+        Task<IEnumerable<Product>> Search(string keyword);
     }
 }

@@ -24,6 +24,8 @@ namespace CommerceHub.Web.Repositories
         Task<Product?> GetProductAsync(int id);
        
         Task<IEnumerable<Product>> GetProductsAsync();
+
+        Task<IEnumerable<Product>> Search(string keyword);
     }
 
     public interface IProductWriter

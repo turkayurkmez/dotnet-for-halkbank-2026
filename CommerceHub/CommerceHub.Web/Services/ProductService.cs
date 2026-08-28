@@ -90,6 +90,11 @@ namespace CommerceHub.Web.Services
            
         }
 
+        public async Task<IEnumerable<Product>> Search(string keyword)
+        {
+            return await _productReader.Search(keyword);
+        }
+
 
 
 

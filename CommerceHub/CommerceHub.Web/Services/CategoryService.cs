@@ -6,6 +6,7 @@ namespace CommerceHub.Web.Services
     public interface ICategoryService
     {
         Task<IEnumerable<Category>> GetCategoriesAsync();
+        Task Create(Category category);
     }
     public class CategoryService : ICategoryService
     {
@@ -15,6 +16,12 @@ namespace CommerceHub.Web.Services
         public CategoryService(EFCategoryRepository categoryRepository)
         {
             this.categoryRepository = categoryRepository;
+        }
+
+        public async Task Create(Category category)
+        {
+            await categoryRepository.AddAsync(category);
+            await categoryRepository.SaveChangesAsync();
         }
 
         public async Task<IEnumerable<Category>> GetCategoriesAsync()

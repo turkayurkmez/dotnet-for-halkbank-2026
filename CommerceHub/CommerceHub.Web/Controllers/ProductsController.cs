@@ -133,7 +133,7 @@ namespace CommerceHub.Web.Controllers
 
         //    stopWatch.Stop();
         //    return Ok(new { message = $"Geçen süre: {stopWatch.ElapsedMilliseconds} ms geçti" });
-         
+
 
         //}
 
@@ -153,8 +153,12 @@ namespace CommerceHub.Web.Controllers
 
 
         //}
-
-
+        [HttpGet("search/{keyword}")]
+        public async Task<IActionResult> Search(string keyword)
+        {
+            var products = await _productService.Search(keyword);
+            return Ok(products);
+        }
 
 
     }

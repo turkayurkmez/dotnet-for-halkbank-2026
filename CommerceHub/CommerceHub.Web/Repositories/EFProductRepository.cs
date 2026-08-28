@@ -32,9 +32,16 @@ namespace CommerceHub.Web.Repositories
 
         public async Task<IEnumerable<Product>> GetProductsAsync()
         {
-            
+
             //Eager Loading:
-            return await _dbSet.AsNoTracking().Include(p=>p.Category).ToListAsync();
+
+            return await _dbSet.AsNoTracking().Include(p => p.Category).ToListAsync();
+        }
+
+        public async Task<IEnumerable<Product>> Search(string keyword)
+        {
+            return await _dbSet.Where(p => p.Name.Contains(keyword) || 
+                                      p.Description!.Contains(keyword)).ToListAsync();
         }
 
         public async Task UpdateAsync(Product product)
