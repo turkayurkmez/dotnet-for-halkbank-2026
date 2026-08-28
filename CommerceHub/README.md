@@ -291,6 +291,11 @@ builder.Services.AddScoped<IProductPriceCalculator, ProductPriceCalculator>();
 - **Explicit Loading**: `Entry(...).Reference(...).LoadAsync()` ile ilişkiyi ihtiyaç anında yükleme
 - Migration tabanlı şema yönetimi: `add-migration`, `update-database`
 - `appsettings.json` içindeki `ConnectionStrings:CommerceHubDb` ile bağlantı bilgisi
+- `Product` modeline `SKU` (nullable `string?`) alanı eklendi
+- `sku_column` migration'u ile `Products` tablosuna `SKU` kolonu eklendi
+- `seed_1` migration'u ile ilk ürüne (`Id=1`) seed SKU değeri (`"logi-keyb-1"`) atandı
+- `IEntity` arayüzü ile tüm entity'ler için ortak üst tip tanımlandı
+- `[Required]`, `[MaxLength]` gibi **Data Annotations** ile model doğrulaması
 
 ```csharp
 // Eager Loading
@@ -393,6 +398,88 @@ await commerceDbContext.Database
 
 ---
 
+### 17. FluentValidation
+- **FluentValidation** kütüphanesi ile model doğrulaması ASP.NET'in yerleşik `ModelState` mekanizmasından ayrıştırıldı
+- `AbstractValidator<T>` sınıfından türeyerek `CreateProductValidator` oluşturuldu
+- Kural tanımları constructor içinde `RuleFor(...)` zinciriyle yazılır
+- `MustAsync` ile **asenkron, veritabanı destekli** kural: kategori ID varlığı kontrolü
+- `CustomAsync` ile **özel hata mesajlı** kural: SKU tekil olma kontrolü
+- `IValidator<Product>` arayüzü DI container'a kaydedildi; controller'a constructor injection ile değil, **action injection** (`IValidator<Product> validator` parametresi) ile verildi
+- Doğrulama hatalıysa `400 Bad Request` + hata mesajları dönülür
+
+```csharp
+// Kural tanımı
+RuleFor(p => p.Name)
+    .NotEmpty().WithMessage("Ürün adı boş olamaz")
+    .MaximumLength(200).WithMessage("Ürün adı en fazla 200 karakter olmalı");
+
+// Async DB kuralı — kategori varlığı kontrolü
+RuleFor(p => p.CategoryId)
+    .MustAsync(async (categoryId, ct) =>
+    {
+        var categories = await categoryRepository.GetAllAsync();
+        return categories.Any(c => c.Id == categoryId);
+    })
+    .WithMessage("Belirtilen kategori, kayıtlı değil!");
+
+// Özel async kural — SKU tekil olma
+RuleFor(p => p.SKU)
+    .CustomAsync(async (sku, context, ct) =>
+    {
+        var duplicate = (await productReader.GetProductsAsync())
+            .FirstOrDefault(p => p.SKU == sku && p.Id != context.InstanceToValidate.Id);
+        if (duplicate is not null)
+            context.AddFailure(nameof(Product.SKU), $"'{sku}' SKU zaten kullanılıyor");
+    });
+```
+
+```csharp
+// DI kaydı
+builder.Services.AddScoped<IValidator<Product>, CreateProductValidator>();
+
+// Controller'da action injection ile kullanım
+[HttpPost]
+public async Task<IActionResult> CreateNewProduct(Product product, IValidator<Product> validator)
+{
+    var result = await validator.ValidateAsync(product);
+    if (!result.IsValid)
+        return BadRequest(result.Errors.Select(e => e.ErrorMessage));
+    ...
+}
+```
+
+---
+
+### 18. Swagger / OpenAPI & Scalar
+- `AddSwaggerGen()` ve `AddOpenApi()` ile API dokümantasyonu oluşturuldu
+- `UseSwagger()` + `UseSwaggerUI()` ile geliştirme ortamında Swagger UI aktif
+- `MapOpenApi()` + `MapScalarApiReference()` ile **Scalar** API istemcisi eklendi
+- Scalar, Swagger UI'a alternatif modern bir API keşfetme arayüzü sunar
+- Sadece `Development` ortamında aktif (`app.Environment.IsDevelopment()`)
+
+```csharp
+// Kayıt
+builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApi();
+
+// Pipeline
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+```
+
+| Adres | Açıklama |
+|---|---|
+| `/swagger` | Swagger UI |
+| `/scalar/v1` | Scalar API istemcisi |
+| `/openapi/v1.json` | Ham OpenAPI JSON |
+
+---
+
 ## 🗂 Proje Yapısı
 
 ```
@@ -438,6 +525,8 @@ CommerceHub.Web/
 │   ├── SMSNotification.cs             # SMS bildirimi
 │   ├── WhatsAppNotification.cs        # WhatsApp bildirimi
 │   └── EmailSender.cs                 # (Eski) e-posta gönderici
+├── Validators/
+│   └── CreateProductValidator.cs      # FluentValidation kuralı (Name, BasePrice, CategoryId, SKU)
 ├── Settings/
 │   └── CommerceSettings.cs            # Options pattern modeli
 ├── appsettings.json                    # Kestrel, logging, uygulama ayarları
@@ -476,6 +565,9 @@ Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 - **ASP.NET Core Minimal API & MVC**
 - **Kestrel**
 - **Entity Framework Core** (SQL Server)
+- **FluentValidation**
+- **Swagger / OpenAPI** (`Swashbuckle`)
+- **Scalar** (modern API istemcisi)
 - **Microsoft.Extensions.Options**
 - **Microsoft.Extensions.Logging**
 - **Microsoft.Extensions.DependencyInjection**
