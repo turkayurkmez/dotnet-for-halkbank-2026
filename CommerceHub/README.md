@@ -494,7 +494,68 @@ builder.Services.AddControllers(option =>
 
 ---
 
-### 19. Swagger / OpenAPI & Scalar
+### 19. DTO Katmanı & Mapster ile Object Mapping
+- **DTO (Data Transfer Object)** kullanımıyla entity'ler API katmanına doğrudan expose edilmekten kurtarıldı
+- `GetAllProductResponse` — ürün listeleme yanıtı; `CategoryName`, `IsLowStock` gibi hesaplanmış alanlar içerir
+- `CreateProductRequest` — ürün oluşturma isteği için `record` tipi DTO
+- `CreateProductResponse` — oluşturulan ürünün `Id`'sini döner
+- **Mapster** kütüphanesi ile DTO ↔ entity dönüşümü: `request.Adapt<Product>()`
+- `TypeAdapterConfig<Product, GetAllProductResponse>.NewConfig()` ile özel mapping kuralı tanımlandı:
+  - `IsLowStock = StockCount < 10` hesaplaması mapping sırasında otomatik yapılır
+- `IProductService.GetProducts()` artık `IEnumerable<GetAllProductResponse>` döndürür
+
+```csharp
+// DTO tanımı (record)
+public record CreateProductRequest(string Name, decimal BasePrice, int? CategoryId, string? SKU, ...);
+public record CreateProductResponse(int CreatedProductId);
+
+// Mapster ile dönüşüm
+var product = request.Adapt<Product>();
+
+// Özel mapping kuralı
+TypeAdapterConfig<Product, GetAllProductResponse>.NewConfig()
+    .Map(dest => dest.IsLowStock, src => src.StockCount < 10);
+```
+
+---
+
+### 20. CQRS Benzeri Command Handler Deseni
+- Her özellik (feature) için ayrı bir `Handler` sınıfı oluşturuldu; `IProductService` içindeki fonksiyon sayısının büyümesi önlendi
+- `CreateProductCommandHandler` — ürün oluşturma iş mantığını kapsar: request → Mapster → `IProductWriter.AddAsync`
+- `Features/` klasör yapısıyla feature-based organizasyon benimsendi:
+  - `Features/Products/Commands/CreateNewProduct/` — komut, handler ve yanıt aynı klasörde
+  - `Features/DataTransferObjects/` — paylaşılan yanıt DTO'ları
+- Controller artık `CreateProductCommandHandler`'ı DI ile alır; `[HttpPost]` action'ı sadece handler'ı çağırır
+
+```csharp
+// Handler
+public class CreateProductCommandHandler
+{
+    public async Task<CreateProductResponse> HandleAsync(CreateProductRequest request)
+    {
+        var product = request.Adapt<Product>();
+        await writer.AddAsync(product);
+        return new CreateProductResponse(product.Id);
+    }
+}
+
+// Controller
+[HttpPost]
+public async Task<IActionResult> CreateNewProduct(CreateProductRequest request)
+{
+    var response = await _handler.HandleAsync(request);
+    return CreatedAtAction(nameof(GetById), new { id = response.CreatedProductId }, response);
+}
+```
+
+```csharp
+// DI kaydı
+builder.Services.AddScoped<CreateProductCommandHandler>();
+```
+
+---
+
+### 21. Swagger / OpenAPI & Scalar
 - `AddSwaggerGen()` ve `AddOpenApi()` ile API dokümantasyonu oluşturuldu
 - `UseSwagger()` + `UseSwaggerUI()` ile geliştirme ortamında Swagger UI aktif
 - `MapOpenApi()` + `MapScalarApiReference()` ile **Scalar** API istemcisi eklendi
@@ -569,6 +630,14 @@ CommerceHub.Web/
 │   ├── SMSNotification.cs             # SMS bildirimi
 │   ├── WhatsAppNotification.cs        # WhatsApp bildirimi
 │   └── EmailSender.cs                 # (Eski) e-posta gönderici
+├── Features/
+│   ├── DataTransferObjects/
+│   │   └── GetAllProductResponse.cs   # Ürün listeleme yanıt DTO'su (IsLowStock hesaplamalı)
+│   └── Products/
+│       └── Commands/
+│           └── CreateNewProduct/
+│               ├── CreateProductRequest.cs        # İstek record DTO'su + CreateProductResponse
+│               └── CreateProductCommandHandler.cs # Mapster ile Product oluşturma handler'ı
 ├── Validators/
 │   └── CreateProductValidator.cs      # FluentValidation kuralı (Name, BasePrice, CategoryId, SKU)
 ├── Filters/
@@ -612,6 +681,7 @@ Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 - **Kestrel**
 - **Entity Framework Core** (SQL Server)
 - **FluentValidation**
+- **Mapster** (object mapping)
 - **Swagger / OpenAPI** (`Swashbuckle`)
 - **Scalar** (modern API istemcisi)
 - **Microsoft.Extensions.Options**
