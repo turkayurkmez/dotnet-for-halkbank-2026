@@ -4,9 +4,12 @@
 using CommerceHub.Web.Data;
 using CommerceHub.Web.Exceptions;
 using CommerceHub.Web.Middleware;
+using CommerceHub.Web.Models;
 using CommerceHub.Web.Repositories;
 using CommerceHub.Web.Services;
 using CommerceHub.Web.Settings;
+using CommerceHub.Web.Validators;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
@@ -41,7 +44,7 @@ var connectionString = builder.Configuration.GetConnectionString("CommerceHubDb"
 builder.Services.AddDbContext<CommerceDbContext>(options => options
                                                               .UseSqlServer(connectionString)
                                                               .LogTo(Console.WriteLine,LogLevel.Information));
-
+builder.Services.AddScoped<IValidator<Product>, CreateProductValidator>();
 
 
 builder.Services.AddSwaggerGen();

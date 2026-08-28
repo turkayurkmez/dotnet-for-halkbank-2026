@@ -1,6 +1,7 @@
 ﻿using CommerceHub.Web.Data;
 using CommerceHub.Web.Models;
 using CommerceHub.Web.Services;
+using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -44,19 +45,19 @@ namespace CommerceHub.Web.Controllers
         //    var price = _productService.GetFinalPrice(id);
         //    return Ok(price);
         //}
-        [HttpGet("GetTotal")]
-        public IActionResult GetOrderTotal()
-        {
-            var orders = new List<IPricableOrder>()
-            {
-                new Order{ ItemPrices = new(){1300,2500}},
-               // new GiftOrder{ ItemPrices = new(){ 3000,5000 }, Note="Doğum...." }
-            };
+        //[HttpGet("GetTotal")]
+        //public IActionResult GetOrderTotal()
+        //{
+        //    var orders = new List<IPricableOrder>()
+        //    {
+        //        new Order{ ItemPrices = new(){1300,2500}},
+        //       // new GiftOrder{ ItemPrices = new(){ 3000,5000 }, Note="Doğum...." }
+        //    };
 
-            _orderService.PrintTotal(orders);
+        //    _orderService.PrintTotal(orders);
 
-            return Ok(new { message = "Sonuç konsol'da" });
-        }
+        //    return Ok(new { message = "Sonuç konsol'da" });
+        //}
 
         //[HttpGet("Demo/{id}")]
         //public IActionResult ExplicitLoadingDemo(int id, CommerceDbContext commerceDbContext)
@@ -80,10 +81,31 @@ namespace CommerceHub.Web.Controllers
 
 
         [HttpPost]
-        public async Task<IActionResult> CreateNewProduct(Product product)
+        public async Task<IActionResult> CreateNewProduct(Product product, IValidator<Product> validator)
         {
-            await _productService.Create(product);
-            return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+
+            //FluentValidation...
+
+            var validationResult = await validator.ValidateAsync(product);
+
+            //ASP.NET'in standart validasyon işlemi:
+            //if (ModelState.IsValid)
+            //{
+            //    await _productService.Create(product);
+            //    return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+            //}
+
+            if (validationResult.IsValid)
+            {
+                await _productService.Create(product);
+                return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+            }
+
+            var errors = validationResult.Errors.Select(e => e.ErrorMessage);
+
+
+            return BadRequest(errors);
+           
 
         }
 

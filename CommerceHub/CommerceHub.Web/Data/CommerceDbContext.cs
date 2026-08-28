@@ -31,7 +31,7 @@ namespace CommerceHub.Web.Data
 
             modelBuilder.Entity<Category>().HasData(new Category { Id = 1, Name = "Bilgisayar" });
             modelBuilder.Entity<Product>().HasData(
-                new Product { Id = 1, Name = "Kablosuz Klavye", Description = "Logitech Bluetooth", BasePrice = 2000, CategoryId = 1, DiscountRate = 0.25, IsOnSale = true, StockCount = 100 },
+                new Product { Id = 1, Name = "Kablosuz Klavye", Description = "Logitech Bluetooth", BasePrice = 2000, CategoryId = 1, DiscountRate = 0.25, IsOnSale = true, StockCount = 100,SKU="logi-keyb-1" },
 
                 new Product { Id = 2, Name = "Kablolu Mouse", Description = "Gamer mouse", BasePrice = 250, CategoryId = 1, DiscountRate = 0, IsOnSale = false, StockCount = 100 },
 
