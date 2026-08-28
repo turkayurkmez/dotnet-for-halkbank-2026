@@ -3,6 +3,8 @@
 //İstek gelir -> Kestrel dinler -> HttpContext nesnesi oluşturur  -> Geri kalanı backend'in işidir.
 using CommerceHub.Web.Data;
 using CommerceHub.Web.Exceptions;
+using CommerceHub.Web.Features.DataTransferObjects;
+using CommerceHub.Web.Features.Products.Commands.CreateNewProduct;
 using CommerceHub.Web.Filters;
 using CommerceHub.Web.Middleware;
 using CommerceHub.Web.Models;
@@ -11,6 +13,7 @@ using CommerceHub.Web.Services;
 using CommerceHub.Web.Settings;
 using CommerceHub.Web.Validators;
 using FluentValidation;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
@@ -22,7 +25,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers(option =>
 {
     option.Filters.Add<ValidationFilter>();
-}).AddJsonOptions(option => option.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
+});
 
 //Binding (IOptions Binding) : 
 builder.Services.Configure<CommerceSettings>(builder.Configuration.GetSection("CommerceSettings"));
@@ -55,6 +58,10 @@ builder.Services.AddScoped<IValidator<Product>, CreateProductValidator>();
 
 builder.Services.AddSwaggerGen();
 builder.Services.AddOpenApi();
+builder.Services.AddScoped<CreateProductCommandHandler>();
+
+TypeAdapterConfig<Product, GetAllProductResponse>.NewConfig()
+                        .Map(dest => dest.IsLowStock, src => src.StockCount < 10);
 
 var app = builder.Build();
 

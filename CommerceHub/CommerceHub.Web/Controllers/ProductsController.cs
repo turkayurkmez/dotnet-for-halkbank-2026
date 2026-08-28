@@ -1,7 +1,10 @@
 ﻿using CommerceHub.Web.Data;
+using CommerceHub.Web.Features.DataTransferObjects;
+using CommerceHub.Web.Features.Products.Commands.CreateNewProduct;
 using CommerceHub.Web.Models;
 using CommerceHub.Web.Services;
 using FluentValidation;
+using Mapster;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,14 +19,14 @@ namespace CommerceHub.Web.Controllers
 
         private readonly IProductService _productService;
         private readonly IOrderService _orderService;
+        private readonly CreateProductCommandHandler _handler;
 
 
-        public ProductsController(IProductService productService, IOrderService orderService)
+        public ProductsController(IProductService productService, IOrderService orderService, CreateProductCommandHandler handler)
         {
             _productService = productService;
             _orderService = orderService;
-
-
+            _handler = handler;
         }
         [HttpGet]
         public async Task<IActionResult> GetProducts()
@@ -31,11 +34,23 @@ namespace CommerceHub.Web.Controllers
 
             //ProductService productService = new ProductService();
             var products = await _productService.GetProducts();//GetProducts()'ın nasıl çalıştığını BİLMİYOR!
+            //var response = products.Select(p => new GetAllProductResponse
+            //{
+            //    Id = p.Id,
+            //    Name = p.Name,
+            //    BasePrice = p.BasePrice,
+            //    Description = p.Description,
+            //    CategoryName = p.Category?.Name ?? string.Empty,
+            //    StockCount = p.StockCount,
+            //    SKU = p.SKU
+            //});
+
+            var response = await _productService.GetProducts();
 
             //maaliyeti düşürmek için, indirim hesaplamaktan vazgeçtik.
            //products.ForEach(p => p.BasePrice = _productService.GetFinalPrice(p.Id));
             //_productService.SendMailToSupplier();
-            return Ok(products);
+            return Ok(response);
         }
 
         //[HttpGet("{id:int}")]
@@ -81,7 +96,7 @@ namespace CommerceHub.Web.Controllers
 
 
         [HttpPost]
-        public async Task<IActionResult> CreateNewProduct(Product product, IValidator<Product> validator)
+        public async Task<IActionResult> CreateNewProduct(CreateProductRequest product, IValidator<Product> validator)
         {
 
             //FluentValidation...
@@ -101,9 +116,12 @@ namespace CommerceHub.Web.Controllers
             //    return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
             //}
 
-            await _productService.Create(product);
-            return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);       
-           
+            //await _productService.Create(product);
+            //return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);       
+            var response =  await  _handler.HandleAsync(product);
+            return CreatedAtAction(nameof(GetById), new { id = response.CreatedProductId }, product);
+
+
 
         }
 

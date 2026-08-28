@@ -1,5 +1,7 @@
-﻿using CommerceHub.Web.Models;
+﻿using CommerceHub.Web.Features.DataTransferObjects;
+using CommerceHub.Web.Models;
 using CommerceHub.Web.Repositories;
+using Mapster;
 
 namespace CommerceHub.Web.Services
 {
@@ -58,7 +60,12 @@ namespace CommerceHub.Web.Services
             _logger.LogInformation($"{product.Name} için hesaplanan indirimli fiyat: {finalPrice}");
             return finalPrice;
         }
-        public async Task<List<Product>> GetProducts() => (await _productReader.GetProductsAsync()).ToList();
+        public async Task<IEnumerable<GetAllProductResponse>> GetProducts()
+        {
+          var products =  await _productReader.GetProductsAsync();
+            var response = products.Adapt<IEnumerable<GetAllProductResponse>>();
+            return response;
+        }
 
         public void SendMailToSupplier()
         {
@@ -84,15 +91,17 @@ namespace CommerceHub.Web.Services
            await  _productWriter.DeleteAsync(id);
         }
 
-        public async Task<Product> GetProduct(int id)
+        public async Task<GetAllProductResponse> GetProduct(int id)
         {
-           return await _productReader.GetProductAsync(id);
+           var product = await _productReader.GetProductAsync(id);
+            return product.Adapt<GetAllProductResponse>();
            
         }
 
-        public async Task<IEnumerable<Product>> Search(string keyword)
+        public async Task<IEnumerable<GetAllProductResponse>> Search(string keyword)
         {
-            return await _productReader.Search(keyword);
+           var availableProducts = await _productReader.Search(keyword);
+            return availableProducts.Adapt<IEnumerable<GetAllProductResponse>>();
         }
 
 

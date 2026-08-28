@@ -40,7 +40,7 @@ namespace CommerceHub.Web.Repositories
 
         public async Task<IEnumerable<Product>> Search(string keyword)
         {
-            return await _dbSet.Where(p => p.Name.Contains(keyword) || 
+            return await _dbSet.Include(p=>p.Category).Where(p => p.Name.Contains(keyword) || 
                                       p.Description!.Contains(keyword)).ToListAsync();
         }
 
