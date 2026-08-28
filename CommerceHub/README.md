@@ -450,7 +450,51 @@ public async Task<IActionResult> CreateNewProduct(Product product, IValidator<Pr
 
 ---
 
-### 18. Swagger / OpenAPI & Scalar
+### 18. Action Filters & Global Validation Filter
+- **Action Filter** (`IAsyncActionFilter`) ile controller'lardaki tekrar eden doğrulama kodu merkezileştirildi
+- `ValidationFilter` sınıfı her action çalışmadan önce devreye girer; action parametrelerini tarar
+- `typeof(IValidator<>).MakeGenericType(...)` ile runtime'da ilgili validator DI container'dan çözülür
+- Doğrulama başarısızsa `400 Bad Request` + hata mesajları döner, action hiç çalışmaz
+- `AddControllers(option => option.Filters.Add<ValidationFilter>())` ile **global** olarak tüm controller'lara uygulandı
+- `CreateNewProduct` action'ındaki inline `validator.ValidateAsync(...)` kodu kaldırıldı; controller temizlendi
+
+```csharp
+// ValidationFilter — global, tüm action'lara otomatik uygulanır
+public class ValidationFilter : IAsyncActionFilter
+{
+    public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+    {
+        foreach (var argument in context.ActionArguments.Values)
+        {
+            var validatorType = typeof(IValidator<>).MakeGenericType(argument!.GetType());
+            var validator = context.HttpContext.RequestServices.GetService(validatorType) as IValidator;
+
+            if (validator is not null)
+            {
+                var result = await validator.ValidateAsync(new ValidationContext<object>(argument));
+                if (!result.IsValid)
+                {
+                    context.Result = new BadRequestObjectResult(result.Errors.Select(e => e.ErrorMessage));
+                    return;
+                }
+            }
+        }
+        await next();
+    }
+}
+```
+
+```csharp
+// Program.cs — global filter kaydı
+builder.Services.AddControllers(option =>
+{
+    option.Filters.Add<ValidationFilter>();
+});
+```
+
+---
+
+### 19. Swagger / OpenAPI & Scalar
 - `AddSwaggerGen()` ve `AddOpenApi()` ile API dokümantasyonu oluşturuldu
 - `UseSwagger()` + `UseSwaggerUI()` ile geliştirme ortamında Swagger UI aktif
 - `MapOpenApi()` + `MapScalarApiReference()` ile **Scalar** API istemcisi eklendi
@@ -527,6 +571,8 @@ CommerceHub.Web/
 │   └── EmailSender.cs                 # (Eski) e-posta gönderici
 ├── Validators/
 │   └── CreateProductValidator.cs      # FluentValidation kuralı (Name, BasePrice, CategoryId, SKU)
+├── Filters/
+│   └── ValidationFilter.cs            # Global action filter — FluentValidation entegrasyonu
 ├── Settings/
 │   └── CommerceSettings.cs            # Options pattern modeli
 ├── appsettings.json                    # Kestrel, logging, uygulama ayarları
