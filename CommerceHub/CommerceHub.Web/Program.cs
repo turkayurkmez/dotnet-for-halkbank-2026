@@ -3,6 +3,7 @@
 //İstek gelir -> Kestrel dinler -> HttpContext nesnesi oluşturur  -> Geri kalanı backend'in işidir.
 using CommerceHub.Web.Data;
 using CommerceHub.Web.Exceptions;
+using CommerceHub.Web.Filters;
 using CommerceHub.Web.Middleware;
 using CommerceHub.Web.Models;
 using CommerceHub.Web.Repositories;
@@ -18,8 +19,11 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers()
-                .AddJsonOptions(option => option.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
+builder.Services.AddControllers(option =>
+{
+    option.Filters.Add<ValidationFilter>();
+}).AddJsonOptions(option => option.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
+
 //Binding (IOptions Binding) : 
 builder.Services.Configure<CommerceSettings>(builder.Configuration.GetSection("CommerceSettings"));
 
@@ -28,8 +32,8 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<EFProductRepository>();
-builder.Services.AddScoped<IProductReader>(sp=>sp.GetRequiredService<EFProductRepository>());
-builder.Services.AddScoped<IProductWriter>(sp=>sp.GetRequiredService<EFProductRepository>());
+builder.Services.AddScoped<IProductReader>(sp => sp.GetRequiredService<EFProductRepository>());
+builder.Services.AddScoped<IProductWriter>(sp => sp.GetRequiredService<EFProductRepository>());
 
 builder.Services.AddScoped<EFCategoryRepository>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
@@ -43,7 +47,9 @@ var connectionString = builder.Configuration.GetConnectionString("CommerceHubDb"
 
 builder.Services.AddDbContext<CommerceDbContext>(options => options
                                                               .UseSqlServer(connectionString)
-                                                              .LogTo(Console.WriteLine,LogLevel.Information));
+                                                              .LogTo(Console.WriteLine, LogLevel.Information));
+
+
 builder.Services.AddScoped<IValidator<Product>, CreateProductValidator>();
 
 

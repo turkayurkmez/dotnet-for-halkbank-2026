@@ -86,7 +86,7 @@ namespace CommerceHub.Web.Controllers
 
             //FluentValidation...
 
-            var validationResult = await validator.ValidateAsync(product);
+            // var validationResult = await validator.ValidateAsync(product);
 
             //ASP.NET'in standart validasyon işlemi:
             //if (ModelState.IsValid)
@@ -95,16 +95,14 @@ namespace CommerceHub.Web.Controllers
             //    return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
             //}
 
-            if (validationResult.IsValid)
-            {
-                await _productService.Create(product);
-                return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
-            }
+            //if (validationResult.IsValid)
+            //{
+            //    await _productService.Create(product);
+            //    return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+            //}
 
-            var errors = validationResult.Errors.Select(e => e.ErrorMessage);
-
-
-            return BadRequest(errors);
+            await _productService.Create(product);
+            return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);       
            
 
         }
