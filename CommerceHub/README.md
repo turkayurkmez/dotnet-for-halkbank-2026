@@ -555,7 +555,66 @@ builder.Services.AddScoped<CreateProductCommandHandler>();
 
 ---
 
-### 21. Swagger / OpenAPI & Scalar
+### 21. MediatR & Mediator Pattern
+- **MediatR** kütüphanesiyle Mediator tasarım deseni uygulandı; controller ile handler arasındaki doğrudan bağımlılık kaldırıldı
+- `IMediator.Send(request)` ile istek gönderilir; hangi handler'ın çalışacağını MediatR otomatik çözer
+- `CreateProductRequest : IRequest<CreateProductResponse>` — komut isteği
+- `GetProductsRequest : IRequest<IEnumerable<GetAllProductResponse>>` — sorgu isteği
+- `CreateProductCommandHandler : IRequestHandler<CreateProductRequest, CreateProductResponse>` — komut handler'ı
+- `GetAllProductsHandler : IRequestHandler<GetProductsRequest, IEnumerable<GetAllProductResponse>>` — sorgu handler'ı
+- `Assembly.GetExecutingAssembly()` ile tüm handler'lar otomatik keşfedilerek kaydedilir
+- `CreateProductCommandHandler` artık doğrudan DI'a kaydedilmez; MediatR yönetir
+
+```csharp
+// Kayıt
+builder.Services.AddMediatR(config =>
+    config.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+
+// Controller'da kullanım
+var response = await _mediator.Send(new GetProductsRequest());
+var result   = await _mediator.Send(new CreateProductRequest(...));
+```
+
+---
+
+### 22. MediatR Pipeline Behavior & Notification
+#### Pipeline Behavior
+- `IPipelineBehavior<TRequest, TResponse>` ile MediatR pipeline'ına **ara katman** eklendi
+- `ValidationBehavior<TRequest, TResponse>` — her istek handler'a ulaşmadan önce FluentValidation çalıştırır
+- Tüm `IValidator<TRequest>` implementasyonları DI'dan toplanır; başarısızsa `ValidationException` fırlatır
+- `ValidationFilter` (Action Filter) yerini bu pipeline behavior'a bıraktı; validasyon artık MediatR katmanında
+- `AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>))` ile global kaydedildi
+
+```csharp
+// Pipeline behavior kaydı
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+```
+
+#### Notification (Pub/Sub)
+- `INotification` ile **yayın/abone (publish/subscribe)** deseni uygulandı
+- `ProductCreatedNotification` — ürün oluşturulduğunda yayınlanan bildirim nesnesi
+- `ProductCreatedNotificationHandler : INotificationHandler<ProductCreatedNotification>` — bildirimi dinler ve loglar
+- `_mediator.Publish(new ProductCreatedNotification(response))` ile handler içinden yayın yapılır
+- Birden fazla handler aynı notification'ı dinleyebilir
+
+```csharp
+// Handler içinde yayın
+await _mediator.Publish(new ProductCreatedNotification(response));
+
+// Notification handler
+public class ProductCreatedNotificationHandler : INotificationHandler<ProductCreatedNotification>
+{
+    public Task Handle(ProductCreatedNotification notification, CancellationToken ct)
+    {
+        _logger.LogInformation($"{notification.CreatedProduct.CreatedProductId} id'li ürün eklendi");
+        return Task.CompletedTask;
+    }
+}
+```
+
+---
+
+### 23. Swagger / OpenAPI & Scalar
 - `AddSwaggerGen()` ve `AddOpenApi()` ile API dokümantasyonu oluşturuldu
 - `UseSwagger()` + `UseSwaggerUI()` ile geliştirme ortamında Swagger UI aktif
 - `MapOpenApi()` + `MapScalarApiReference()` ile **Scalar** API istemcisi eklendi
@@ -631,13 +690,21 @@ CommerceHub.Web/
 │   ├── WhatsAppNotification.cs        # WhatsApp bildirimi
 │   └── EmailSender.cs                 # (Eski) e-posta gönderici
 ├── Features/
+│   ├── Behaviors/
+│   │   └── ValidationBehavior.cs              # MediatR pipeline behavior — FluentValidation entegrasyonu
 │   ├── DataTransferObjects/
-│   │   └── GetAllProductResponse.cs   # Ürün listeleme yanıt DTO'su (IsLowStock hesaplamalı)
+│   │   └── GetAllProductResponse.cs           # Ürün listeleme yanıt DTO'su (IsLowStock hesaplamalı)
 │   └── Products/
-│       └── Commands/
-│           └── CreateNewProduct/
-│               ├── CreateProductRequest.cs        # İstek record DTO'su + CreateProductResponse
-│               └── CreateProductCommandHandler.cs # Mapster ile Product oluşturma handler'ı
+│       ├── Commands/
+│       │   └── CreateNewProduct/
+│       │       ├── CreateProductRequest.cs            # IRequest<CreateProductResponse> — komut DTO'su
+│       │       └── CreateProductCommandHandler.cs     # IRequestHandler impl. — Mapster + Publish
+│       └── Queries/
+│           └── GetAllProducts/
+│               ├── GetProductsRequest.cs              # IRequest<IEnumerable<GetAllProductResponse>>
+│               └── GetAllProductsHandler.cs           # IRequestHandler impl. — Mapster ile listeleme
+├── Notifications/
+│   └── ProductCreatedNotification.cs          # INotification + INotificationHandler (Pub/Sub)
 ├── Validators/
 │   └── CreateProductValidator.cs      # FluentValidation kuralı (Name, BasePrice, CategoryId, SKU)
 ├── Filters/
@@ -682,6 +749,7 @@ Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 - **Entity Framework Core** (SQL Server)
 - **FluentValidation**
 - **Mapster** (object mapping)
+- **MediatR** (Mediator pattern, Pipeline Behavior, Pub/Sub)
 - **Swagger / OpenAPI** (`Swashbuckle`)
 - **Scalar** (modern API istemcisi)
 - **Microsoft.Extensions.Options**
