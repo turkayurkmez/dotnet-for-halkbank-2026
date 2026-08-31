@@ -614,7 +614,68 @@ public class ProductCreatedNotificationHandler : INotificationHandler<ProductCre
 
 ---
 
-### 23. Swagger / OpenAPI & Scalar
+### 23. ASP.NET Core Identity
+- `IdentityUser`'dan türeyen `CustomUser` sınıfı ile kullanıcı modeli genişletildi: `FullName`, `CustomerId`, `RefreshToken`, `RefreshTokenExpiryDate`
+- `CommerceDbContext`, `IdentityDbContext<CustomUser>`'dan türetildi; Identity tabloları EF Core ile yönetilir
+- `AddIdentity<CustomUser, IdentityRole>()` ile kullanıcı ve rol yönetimi etkinleştirildi
+- `UserManager<CustomUser>` ile kayıt, şifre doğrulama ve rol atama işlemleri
+- `RoleManager<IdentityRole>` ile `Admin` ve `Customer` rolleri uygulama başlangıcında seed edildi
+- `identity_tables` ve `refresh_token` migration'larıyla Identity şeması veritabanına uygulandı
+- `AuthController` — `POST /api/auth/register` ve `POST /api/auth/login` endpoint'leri
+
+```csharp
+// Kayıt (Program.cs)
+builder.Services.AddIdentity<CustomUser, IdentityRole>()
+    .AddEntityFrameworkStores<CommerceDbContext>()
+    .AddDefaultTokenProviders();
+
+// Rol seed (uygulama başlangıcı)
+if (!await roleManager.RoleExistsAsync("Admin"))
+    await roleManager.CreateAsync(new IdentityRole("Admin"));
+```
+
+---
+
+### 24. JWT Authentication & Refresh Token
+- **JWT (JSON Web Token)** ile stateless kimlik doğrulama uygulandı
+- `JwtSettings` — `appsettings.json`'dan okunan token yapılandırması (`SecretKey`, `Issuer`, `Audience`, `AccessTokenExpiryMinutes`, `RefreshTokenExpiryDays`)
+- `TokenService` — erişim token'ı ve refresh token üretir:
+  - `GenerateAccessToken`: `ClaimTypes.NameIdentifier`, `ClaimTypes.Email`, `ClaimTypes.Role`, `CustomerId` claim'leriyle imzalı JWT
+  - `GenerateRefreshToken`: `RandomNumberGenerator` ile 64 byte'lık güvenli rastgele token
+- Refresh token, `CustomUser` üzerinde saklanır (`RefreshToken` + `RefreshTokenExpiryDate`)
+- `AddAuthentication(...).AddJwtBearer(...)` ile token doğrulama pipeline'a eklendi
+- `app.UseAuthentication()` + `app.UseAuthorization()` middleware sırası
+- `[Authorize]` attribute'u ile `ProductsController` endpoint'leri güvence altına alındı
+
+```csharp
+// JWT doğrulama yapılandırması
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(option =>
+    {
+        option.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,   ValidIssuer = jwtSettings.Issuer,
+            ValidateAudience = true, ValidAudience = jwtSettings.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey))
+        };
+    });
+```
+
+```json
+// appsettings.json
+"JwtSettings": {
+  "SecretKey": "...",
+  "Issuer": "CommerceHub",
+  "Audience": "CommerceHubClient",
+  "AccessTokenExpiryMinutes": 60,
+  "RefreshTokenExpiryDays": 20
+}
+```
+
+---
+
+### 25. Swagger / OpenAPI & Scalar
 - `AddSwaggerGen()` ve `AddOpenApi()` ile API dokümantasyonu oluşturuldu
 - `UseSwagger()` + `UseSwaggerUI()` ile geliştirme ortamında Swagger UI aktif
 - `MapOpenApi()` + `MapScalarApiReference()` ile **Scalar** API istemcisi eklendi
@@ -649,9 +710,10 @@ if (app.Environment.IsDevelopment())
 ```
 CommerceHub.Web/
 ├── Controllers/
-│   ├── ProductsController.cs          # Ürün API controller
+│   ├── ProductsController.cs          # Ürün API controller ([Authorize] korumalı)
 │   ├── CategoriesController.cs        # Kategori API controller
-│   └── ReportsController.cs           # Raporlama API controller (3 farklı sorgulama yaklaşımı)
+│   ├── ReportsController.cs           # Raporlama API controller (3 farklı sorgulama yaklaşımı)
+│   └── AuthController.cs              # Kimlik doğrulama controller (register, login)
 ├── Exceptions/
 │   └── NotFoundException.cs           # Özel exception sınıfı
 ├── Middleware/
@@ -661,7 +723,10 @@ CommerceHub.Web/
 │   ├── Product.cs                     # Ürün modeli
 │   ├── Category.cs                    # Kategori modeli
 │   ├── Order.cs                       # Sipariş modeli + IPricableOrder arayüzü + GiftOrder
-│   └── CategorySummary.cs             # Raporlama DTO'su (CategoryName, ProductsCount, AveragePrice)
+│   ├── CategorySummary.cs             # Raporlama DTO'su (CategoryName, ProductsCount, AveragePrice)
+│   └── Identity/
+│       ├── CustomUser.cs              # IdentityUser türevi (FullName, RefreshToken, CustomerId)
+│       └── RegisterRequest.cs         # Kayıt isteği DTO'su
 ├── Data/
 │   └── CommerceDbContext.cs            # EF Core DbContext (Products, Categories)
 ├── Migrations/                         # EF Core migration dosyaları
@@ -681,6 +746,7 @@ CommerceHub.Web/
 │   ├── IProductPriceCalculator.cs     # Fiyat hesaplama arayüzü
 │   ├── ProductService.cs              # İş mantığı koordinasyonu (IProductService impl.)
 │   ├── CategoryService.cs             # Kategori iş mantığı (ICategoryService impl.)
+│   ├── TokenService.cs                # JWT access token + refresh token üretimi
 │   ├── ProductPriceCalculator.cs      # Fiyat hesaplama (IProductPriceCalculator impl.)
 │   ├── OrderService.cs                # Sipariş toplam hesaplama (IOrderService impl.)
 │   ├── NotificationService.cs         # Bildirim koordinasyonu (INotificationService impl.)
@@ -710,7 +776,8 @@ CommerceHub.Web/
 ├── Filters/
 │   └── ValidationFilter.cs            # Global action filter — FluentValidation entegrasyonu
 ├── Settings/
-│   └── CommerceSettings.cs            # Options pattern modeli
+│   ├── CommerceSettings.cs            # Options pattern modeli
+│   └── JwtSettings.cs                 # JWT token yapılandırması (SecretKey, Issuer, Audience, Expiry)
 ├── appsettings.json                    # Kestrel, logging, uygulama ayarları
 └── Program.cs                          # Uygulama giriş noktası
 ```
@@ -750,6 +817,8 @@ Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 - **FluentValidation**
 - **Mapster** (object mapping)
 - **MediatR** (Mediator pattern, Pipeline Behavior, Pub/Sub)
+- **ASP.NET Core Identity**
+- **JWT Bearer Authentication** (`Microsoft.AspNetCore.Authentication.JwtBearer`)
 - **Swagger / OpenAPI** (`Swashbuckle`)
 - **Scalar** (modern API istemcisi)
 - **Microsoft.Extensions.Options**
