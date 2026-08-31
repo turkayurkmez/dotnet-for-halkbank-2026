@@ -1,10 +1,13 @@
 ﻿using CommerceHub.Web.Data;
 using CommerceHub.Web.Features.DataTransferObjects;
 using CommerceHub.Web.Features.Products.Commands.CreateNewProduct;
+using CommerceHub.Web.Features.Products.Queries.GetAllProducts;
 using CommerceHub.Web.Models;
+using CommerceHub.Web.Notifications;
 using CommerceHub.Web.Services;
 using FluentValidation;
 using Mapster;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,21 +22,23 @@ namespace CommerceHub.Web.Controllers
 
         private readonly IProductService _productService;
         private readonly IOrderService _orderService;
-        private readonly CreateProductCommandHandler _handler;
+        // private readonly CreateProductCommandHandler _handler;
+        private readonly IMediator _mediator;
 
 
-        public ProductsController(IProductService productService, IOrderService orderService, CreateProductCommandHandler handler)
+        public ProductsController(IProductService productService, IOrderService orderService, IMediator mediator)
         {
             _productService = productService;
             _orderService = orderService;
-            _handler = handler;
+            _mediator = mediator;
+            //_handler = handler;
         }
         [HttpGet]
         public async Task<IActionResult> GetProducts()
         {
 
             //ProductService productService = new ProductService();
-            var products = await _productService.GetProducts();//GetProducts()'ın nasıl çalıştığını BİLMİYOR!
+            //var products = await _productService.GetProducts();//GetProducts()'ın nasıl çalıştığını BİLMİYOR!
             //var response = products.Select(p => new GetAllProductResponse
             //{
             //    Id = p.Id,
@@ -45,10 +50,13 @@ namespace CommerceHub.Web.Controllers
             //    SKU = p.SKU
             //});
 
-            var response = await _productService.GetProducts();
+            //   var response = await _productService.GetProducts();
+            var request = new GetProductsRequest();
+            var response = await _mediator.Send(request);
+         
 
             //maaliyeti düşürmek için, indirim hesaplamaktan vazgeçtik.
-           //products.ForEach(p => p.BasePrice = _productService.GetFinalPrice(p.Id));
+            //products.ForEach(p => p.BasePrice = _productService.GetFinalPrice(p.Id));
             //_productService.SendMailToSupplier();
             return Ok(response);
         }
@@ -96,7 +104,7 @@ namespace CommerceHub.Web.Controllers
 
 
         [HttpPost]
-        public async Task<IActionResult> CreateNewProduct(CreateProductRequest product, IValidator<Product> validator)
+        public async Task<IActionResult> CreateNewProduct(CreateProductRequest product, IValidator<CreateProductRequest> validator)
         {
 
             //FluentValidation...
@@ -118,8 +126,12 @@ namespace CommerceHub.Web.Controllers
 
             //await _productService.Create(product);
             //return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);       
-            var response =  await  _handler.HandleAsync(product);
+
+
+            var response = await _mediator.Send(product);        
             return CreatedAtAction(nameof(GetById), new { id = response.CreatedProductId }, product);
+
+
 
 
 
@@ -140,7 +152,7 @@ namespace CommerceHub.Web.Controllers
                 return NotFound();
             }
 
-           await _productService.Update(product);
+            await _productService.Update(product);
             return NoContent();
 
 
@@ -153,7 +165,7 @@ namespace CommerceHub.Web.Controllers
             var existing = await _productService.GetProduct(id);
             if (existing is null)
             {
-                return NotFound();                
+                return NotFound();
             }
             await _productService.Delete(id);
             return NoContent();

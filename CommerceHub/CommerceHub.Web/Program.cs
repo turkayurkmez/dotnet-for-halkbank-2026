@@ -1,6 +1,7 @@
 
 //.net core, web sunucusu olarak platform bağımsız Kestrel'i yazdılar!!!!!
 //İstek gelir -> Kestrel dinler -> HttpContext nesnesi oluşturur  -> Geri kalanı backend'in işidir.
+using CommerceHub.Web.Behaviors;
 using CommerceHub.Web.Data;
 using CommerceHub.Web.Exceptions;
 using CommerceHub.Web.Features.DataTransferObjects;
@@ -14,9 +15,11 @@ using CommerceHub.Web.Settings;
 using CommerceHub.Web.Validators;
 using FluentValidation;
 using Mapster;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
+using System.Reflection;
 using System.Text.Json.Serialization;
 
 
@@ -53,12 +56,18 @@ builder.Services.AddDbContext<CommerceDbContext>(options => options
                                                               .LogTo(Console.WriteLine, LogLevel.Information));
 
 
-builder.Services.AddScoped<IValidator<Product>, CreateProductValidator>();
+builder.Services.AddScoped<IValidator<CreateProductRequest>, CreateProductValidator>();
 
 
 builder.Services.AddSwaggerGen();
 builder.Services.AddOpenApi();
-builder.Services.AddScoped<CreateProductCommandHandler>();
+//builder.Services.AddScoped<CreateProductCommandHandler>();
+builder.Services.AddMediatR(config =>
+{
+    config.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+});
+
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
 TypeAdapterConfig<Product, GetAllProductResponse>.NewConfig()
                         .Map(dest => dest.IsLowStock, src => src.StockCount < 10);

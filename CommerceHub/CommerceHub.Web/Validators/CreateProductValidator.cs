@@ -1,11 +1,12 @@
-﻿using CommerceHub.Web.Models;
+﻿using CommerceHub.Web.Features.Products.Commands.CreateNewProduct;
+using CommerceHub.Web.Models;
 using CommerceHub.Web.Repositories;
 using FluentValidation;
 using Microsoft.IdentityModel.Tokens;
 
 namespace CommerceHub.Web.Validators
 {
-    public class CreateProductValidator : AbstractValidator<Product>
+    public class CreateProductValidator : AbstractValidator<CreateProductRequest>
     {
         public CreateProductValidator(EFCategoryRepository categoryRepository, IProductReader productReader)
         {
@@ -35,11 +36,11 @@ namespace CommerceHub.Web.Validators
                        }
 
                        var allProducts = await productReader.GetProductsAsync();
-                       var duplicate = allProducts.FirstOrDefault(p => p.SKU == sku && p.Id != context.InstanceToValidate.Id);
+                       var duplicate = allProducts.Count(p=>p.SKU == sku);
 
-                       if (duplicate is not null)
+                       if (duplicate > 1)
                        {
-                           context.AddFailure(nameof(Product.SKU), $"'{sku}' SKU değeri zaten '{duplicate.Name}' ürünü tarafından kullanılıyor ");
+                           context.AddFailure(nameof(Product.SKU), $"'{sku}' SKU değeri, başka bir ürün tarafından kullanılıyor ");
                        }
 
                    });
