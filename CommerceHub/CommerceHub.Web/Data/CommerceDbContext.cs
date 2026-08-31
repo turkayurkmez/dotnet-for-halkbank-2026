@@ -1,9 +1,11 @@
 ﻿using CommerceHub.Web.Models;
+using CommerceHub.Web.Models.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace CommerceHub.Web.Data
 {
-    public class CommerceDbContext : DbContext
+    public class CommerceDbContext : IdentityDbContext<CustomUser>
     {
         //Nereye bağlanacağım?
         //Tablolar ve ilişkileri nasıl olmalı?
@@ -23,6 +25,8 @@ namespace CommerceHub.Web.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+
+            base.OnModelCreating(modelBuilder);
             modelBuilder.Entity<Product>()
                         .HasOne(p=>p.Category)
                         .WithMany(c=>c.Products)

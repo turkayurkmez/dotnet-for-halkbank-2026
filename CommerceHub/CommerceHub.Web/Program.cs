@@ -9,6 +9,7 @@ using CommerceHub.Web.Features.Products.Commands.CreateNewProduct;
 using CommerceHub.Web.Filters;
 using CommerceHub.Web.Middleware;
 using CommerceHub.Web.Models;
+using CommerceHub.Web.Models.Identity;
 using CommerceHub.Web.Repositories;
 using CommerceHub.Web.Services;
 using CommerceHub.Web.Settings;
@@ -16,10 +17,14 @@ using CommerceHub.Web.Validators;
 using FluentValidation;
 using Mapster;
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Reflection;
+using System.Text;
 using System.Text.Json.Serialization;
 
 
@@ -32,6 +37,7 @@ builder.Services.AddControllers(option =>
 
 //Binding (IOptions Binding) : 
 builder.Services.Configure<CommerceSettings>(builder.Configuration.GetSection("CommerceSettings"));
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
@@ -56,7 +62,14 @@ builder.Services.AddDbContext<CommerceDbContext>(options => options
                                                               .LogTo(Console.WriteLine, LogLevel.Information));
 
 
+builder.Services.AddIdentity<CustomUser, IdentityRole>()
+                .AddEntityFrameworkStores<CommerceDbContext>()
+                .AddDefaultTokenProviders();
+
+
 builder.Services.AddScoped<IValidator<CreateProductRequest>, CreateProductValidator>();
+
+builder.Services.AddScoped<TokenService>();
 
 
 builder.Services.AddSwaggerGen();
@@ -71,6 +84,30 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBeh
 
 TypeAdapterConfig<Product, GetAllProductResponse>.NewConfig()
                         .Map(dest => dest.IsLowStock, src => src.StockCount < 10);
+
+
+
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
+
+builder.Services.AddAuthentication(option =>
+{
+    option.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    option.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(option =>
+{
+    option.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = jwtSettings.Issuer,
+        ValidateAudience = true,
+        ValidAudience = jwtSettings.Audience,
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey))
+       
+    };
+});
+
+
 
 var app = builder.Build();
 
@@ -106,24 +143,64 @@ app.UseMiddleware<RequestTiminingMiddleware>();
 //app.UseRouting();
 //app.UseAuthentication();//kim? nereye?
 
-app.MapGet("/", () => Results.Ok("istek, endpoint'e ulaştı!"));
-app.MapGet("/hata", () =>
-{
+//app.MapGet("/", () => Results.Ok("istek, endpoint'e ulaştı!"));
+//app.MapGet("/hata", () =>
+//{
 
-    throw new NotFoundException("Test verisi bulunamadı!");
-});
-app.MapGet("/ayarlar", (IOptions<CommerceSettings> options) =>
-{
-    //TODO 1: Burada, IOptions test edilecek.
-    var settings = options.Value;
-    return Results.Ok(new
-    {
-        settings.DefaultCurrency,
-        settings.MaxOrderItemCount
+//    throw new NotFoundException("Test verisi bulunamadı!");
+//});
+//app.MapGet("/ayarlar", (IOptions<CommerceSettings> options) =>
+//{
+//    //TODO 1: Burada, IOptions test edilecek.
+//    var settings = options.Value;
+//    return Results.Ok(new
+//    {
+//        settings.DefaultCurrency,
+//        settings.MaxOrderItemCount
 
-    });
-});
+//    });
+//});
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<CustomUser>>();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+    if (!await roleManager.RoleExistsAsync("Admin"))
+    {
+        await roleManager.CreateAsync(new IdentityRole("Admin"));
+    }
+
+    if (!await roleManager.RoleExistsAsync("Customer"))
+    {
+        await roleManager.CreateAsync(new IdentityRole("Customer"));
+    }
+
+
+    if (await userManager.FindByEmailAsync("admin@ecommercehub.com") is null )
+    {
+        var adminUser = new CustomUser
+        {
+            UserName = "admin@ecommercehub.com",
+            Email = "admin@ecommercehub.com",
+            FullName = "Commerce Hub Admin"
+        };
+
+        var result = await userManager.CreateAsync(adminUser, "Admin123!");
+        if (result.Succeeded)
+        {
+            await userManager.AddToRoleAsync(adminUser, "Admin");
+        }
+    }
+}
+
+
+
 app.Run();
 
 

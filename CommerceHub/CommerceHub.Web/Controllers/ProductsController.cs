@@ -8,6 +8,7 @@ using CommerceHub.Web.Services;
 using FluentValidation;
 using Mapster;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +34,9 @@ namespace CommerceHub.Web.Controllers
             _mediator = mediator;
             //_handler = handler;
         }
+
+
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetProducts()
         {
@@ -103,7 +107,9 @@ namespace CommerceHub.Web.Controllers
         }
 
 
+        [Authorize(Roles ="Admin")]
         [HttpPost]
+      
         public async Task<IActionResult> CreateNewProduct(CreateProductRequest product, IValidator<CreateProductRequest> validator)
         {
 
