@@ -18,6 +18,7 @@ namespace CommerceHub.Web.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Policy ="AdminPolicy")]
     public class ProductsController : ControllerBase
     {
 
@@ -36,7 +37,7 @@ namespace CommerceHub.Web.Controllers
         }
 
 
-        [Authorize]
+        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> GetProducts()
         {
@@ -100,6 +101,7 @@ namespace CommerceHub.Web.Controllers
         //}
 
         [HttpGet("/Get/{id:int}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
         {
             var product = await _productService.GetProduct(id);
@@ -107,7 +109,7 @@ namespace CommerceHub.Web.Controllers
         }
 
 
-        [Authorize(Roles ="Admin")]
+      // [Authorize(Roles ="Admin")]
         [HttpPost]
       
         public async Task<IActionResult> CreateNewProduct(CreateProductRequest product, IValidator<CreateProductRequest> validator)
@@ -210,6 +212,7 @@ namespace CommerceHub.Web.Controllers
 
         //}
         [HttpGet("search/{keyword}")]
+        [AllowAnonymous]
         public async Task<IActionResult> Search(string keyword)
         {
             var products = await _productService.Search(keyword);

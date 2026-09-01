@@ -24,6 +24,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Reflection;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -107,6 +108,16 @@ builder.Services.AddAuthentication(option =>
     };
 });
 
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminPolicy", policy =>
+    {
+        policy.RequireAuthenticatedUser().
+               RequireRole("Admin")
+              .RequireClaim(ClaimTypes.Email);
+             
+    });
+});
 
 
 var app = builder.Build();
