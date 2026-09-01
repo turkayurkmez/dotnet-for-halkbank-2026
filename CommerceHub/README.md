@@ -675,7 +675,76 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 ---
 
-### 25. Swagger / OpenAPI & Scalar
+### 25. Refresh Token Endpoint'i
+- `POST /api/auth/refresh` endpoint'i ile süresi dolmamış refresh token kullanılarak yeni access token alınır
+- `RefreshRequest` — refresh token'ı taşıyan `record` DTO
+- `UserManager.Users.FirstOrDefaultAsync(u => u.RefreshToken == ...)` ile token sahibi kullanıcı bulunur
+- Refresh token geçersiz ya da süresi dolmuşsa `401 Unauthorized` döner
+- Başarılı yenilemede hem access token hem de refresh token yenilenir, yeni değerler kullanıcıya yazılır
+
+```csharp
+[HttpPost("refresh")]
+public async Task<IActionResult> Refresh(RefreshRequest request)
+{
+    var user = await _userManager.Users.FirstOrDefaultAsync(u => u.RefreshToken == request.RefreshToken);
+    if (user is null || user.RefreshTokenExpiryDate < DateTime.Now)
+        return Unauthorized(new { message = "Refresh Token geçersiz ya da süresi dolmuş..." });
+
+    var newAccessToken  = _tokenService.GenerateAccessToken(user, roles);
+    var newRefreshToken = _tokenService.GenerateRefreshToken();
+    user.RefreshToken = newRefreshToken;
+    await _userManager.UpdateAsync(user);
+    return Ok(new { accessToken = newAccessToken, refreshToken = newRefreshToken });
+}
+```
+
+---
+
+### 26. Authorization Policy
+- `AddAuthorization(options => options.AddPolicy(...))` ile özel, kural tabanlı politika tanımlandı
+- `AdminPolicy` — hem `Admin` rolünü hem de `ClaimTypes.Email` claim'ini zorunlu kılar
+- `[Authorize(Policy = "AdminPolicy")]` ile `ProductsController` tüm endpoint'leri bu politikayla korunur
+- Birden fazla kural birleştirilebilir: `RequireAuthenticatedUser()`, `RequireRole(...)`, `RequireClaim(...)`
+
+```csharp
+// Program.cs
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminPolicy", policy =>
+        policy.RequireAuthenticatedUser()
+              .RequireRole("Admin")
+              .RequireClaim(ClaimTypes.Email));
+});
+
+// Controller
+[Authorize(Policy = "AdminPolicy")]
+public class ProductsController : ControllerBase { ... }
+```
+
+---
+
+### 27. OpenAPI Bearer Security Scheme Transformer
+- `IOpenApiDocumentTransformer` implementasyonu ile OpenAPI (Scalar) dokümantasyonuna **JWT Bearer güvenlik şeması** eklendi
+- `BearerSecuritySchemeTransformer` — uygulama JWT Bearer authentication kullanıyorsa tüm operasyonlara otomatik olarak `Authorization: Bearer <token>` gereksinimi ekler
+- `IAuthenticationSchemeProvider` ile kayıtlı scheme'ler runtime'da sorgulanır
+- `document.Components.SecuritySchemes` ve `operation.Security` programatik olarak doldurulur
+- Scalar UI'da token girme alanı otomatik belirir
+
+```csharp
+public class BearerSecuritySchemeTransformer : IOpenApiDocumentTransformer
+{
+    public async Task TransformAsync(OpenApiDocument document, ...)
+    {
+        document.Components.SecuritySchemes[JwtBearerDefaults.AuthenticationScheme] = bearerScheme;
+        foreach (var operation in document.Paths.Values.SelectMany(p => p.Operations.Values))
+            operation.Security.Add(new OpenApiSecurityRequirement { [bearerScheme] = [] });
+    }
+}
+```
+
+---
+
+### 28. Swagger / OpenAPI & Scalar
 - `AddSwaggerGen()` ve `AddOpenApi()` ile API dokümantasyonu oluşturuldu
 - `UseSwagger()` + `UseSwaggerUI()` ile geliştirme ortamında Swagger UI aktif
 - `MapOpenApi()` + `MapScalarApiReference()` ile **Scalar** API istemcisi eklendi
@@ -713,7 +782,7 @@ CommerceHub.Web/
 │   ├── ProductsController.cs          # Ürün API controller ([Authorize] korumalı)
 │   ├── CategoriesController.cs        # Kategori API controller
 │   ├── ReportsController.cs           # Raporlama API controller (3 farklı sorgulama yaklaşımı)
-│   └── AuthController.cs              # Kimlik doğrulama controller (register, login)
+│   └── AuthController.cs              # Kimlik doğrulama controller (register, login, refresh)
 ├── Exceptions/
 │   └── NotFoundException.cs           # Özel exception sınıfı
 ├── Middleware/
@@ -771,6 +840,8 @@ CommerceHub.Web/
 │               └── GetAllProductsHandler.cs           # IRequestHandler impl. — Mapster ile listeleme
 ├── Notifications/
 │   └── ProductCreatedNotification.cs          # INotification + INotificationHandler (Pub/Sub)
+├── OpenApi/
+│   └── BearerSecuritySchemeTransformer.cs  # IOpenApiDocumentTransformer — Scalar için JWT Bearer şeması
 ├── Validators/
 │   └── CreateProductValidator.cs      # FluentValidation kuralı (Name, BasePrice, CategoryId, SKU)
 ├── Filters/
@@ -792,19 +863,22 @@ dotnet run --project CommerceHub.Web
 
 Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 
-| Endpoint                     | Açıklama                                         |
-|------------------------------|--------------------------------------------------|
-| `GET /`                      | Temel endpoint yanıtı                            |
-| `GET /hata`                  | `NotFoundException` fırlatır (test)              |
-| `GET /ayarlar`               | `CommerceSettings` değerlerini döner             |
-| `GET /api/products`          | Tüm ürünleri indirimli fiyatlarıyla listeler     |
-| `GET /api/products/{id}`     | Belirli bir ürünün hesaplanmış fiyatını döner    |
-| `GET /api/products/GetTotal` | Sipariş toplamlarını hesaplar ve yazdırır        |
-| `GET /api/products/Demo/{id}` | Explicit Loading demo endpoint'i               |
-| `GET /api/categories`         | Tüm kategorileri listeler (async)               |
-| `GET /api/reports/category-summary` | Bellek üzerinde LINQ gruplama ile özet |
-| `GET /api/reports/category-summary-alternatif` | EF Core LINQ `GroupBy` sorgusu |
-| `GET /api/reports/category-summary-sql` | Ham SQL ile `Database.SqlQuery<T>()` |
+| Endpoint                                        | Açıklama                                                        | Auth            |
+|-------------------------------------------------|-----------------------------------------------------------------|-----------------|
+| `GET /api/products`                             | Tüm ürünleri listeler (async, Mediator)                         | AdminPolicy     |
+| `GET /Get/{id}`                                 | Tek ürünü id ile getirir                                        | AdminPolicy     |
+| `POST /api/products`                            | Yeni ürün oluşturur (FluentValidation + MediatR)                | AdminPolicy     |
+| `PUT /api/products/{id}`                        | Mevcut ürünü günceller                                          | AdminPolicy     |
+| `DELETE /api/products/{id}`                     | Ürünü siler                                                     | AdminPolicy     |
+| `GET /api/categories`                           | Tüm kategorileri listeler (async)                               | —               |
+| `GET /api/reports/category-summary`             | Bellek üzerinde LINQ gruplama ile özet                          | —               |
+| `GET /api/reports/category-summary-alternatif`  | EF Core LINQ `GroupBy` sorgusu                                  | —               |
+| `GET /api/reports/category-summary-sql`         | Ham SQL ile `Database.SqlQuery<T>()`                            | —               |
+| `POST /api/auth/register`                       | Yeni kullanıcı kaydı (Identity, `Customer` rolü atanır)        | —               |
+| `POST /api/auth/login`                          | Giriş — JWT access token + refresh token döner                  | —               |
+| `POST /api/auth/refresh`                        | Refresh token ile yeni access + refresh token alır              | —               |
+| `GET /swagger`                                  | Swagger UI (sadece Development)                                 | —               |
+| `GET /scalar/v1`                                | Scalar API istemcisi — JWT Bearer destekli (sadece Development) | —               |
 
 ---
 

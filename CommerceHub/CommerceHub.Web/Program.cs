@@ -10,6 +10,7 @@ using CommerceHub.Web.Filters;
 using CommerceHub.Web.Middleware;
 using CommerceHub.Web.Models;
 using CommerceHub.Web.Models.Identity;
+using CommerceHub.Web.OpenApi;
 using CommerceHub.Web.Repositories;
 using CommerceHub.Web.Services;
 using CommerceHub.Web.Settings;
@@ -74,7 +75,10 @@ builder.Services.AddScoped<TokenService>();
 
 
 builder.Services.AddSwaggerGen();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(option =>
+{
+    option.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+});
 //builder.Services.AddScoped<CreateProductCommandHandler>();
 builder.Services.AddMediatR(config =>
 {
