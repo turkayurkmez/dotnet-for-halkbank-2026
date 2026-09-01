@@ -1,4 +1,5 @@
 ﻿using CommerceHub.Web.Exceptions;
+using Serilog.Context;
 
 namespace CommerceHub.Web.Middleware
 {
@@ -19,36 +20,38 @@ namespace CommerceHub.Web.Middleware
             }
             catch (Exception ex)
             {
-                await handleExceptionAsync(context, ex,logger);  
+                await handleExceptionAsync(context, ex, logger);
             }
         }
 
         private async Task handleExceptionAsync(HttpContext context, Exception ex, ILogger<ExceptionHandlingMiddleware> logger)
         {
-            logger.LogError($"[!!HATA!!] -> {ex.GetType().Name}: {ex.Message}");
-
-            var (statusCode, message) = ex switch
+            using (LogContext.PushProperty("TraceId", context.TraceIdentifier))
             {
-                NotFoundException => (StatusCodes.Status404NotFound, ex.Message),
-                ValidationException => (StatusCodes.Status500InternalServerError,ex.Message),
-                _ => (StatusCodes.Status500InternalServerError,"Bilinmeyen bir hata oluştu")
-            };
+                logger.LogError(ex, ex.Message + " Path:{path} Method:{method}", context.Request.Path, context.Request.Method);
 
-            var problemDetails = new ProblemDetails
-            {
-                Type = "about:blank",
-                Title = message,
-                Status = statusCode,
-                Detail = "İşlem sırasında bir hata oldu.",
-                Instance = context.TraceIdentifier
-            };
+                var (statusCode, message) = ex switch
+                {
+                    NotFoundException => (StatusCodes.Status404NotFound, ex.Message),
+                    ValidationException => (StatusCodes.Status500InternalServerError, ex.Message),
+                    _ => (StatusCodes.Status500InternalServerError, "Bilinmeyen bir hata oluştu")
+                };
 
-            context.Response.ContentType = "application/problem+json";
-            context.Response.StatusCode = statusCode;
+                var problemDetails = new ProblemDetails
+                {
+                    Type = "about:blank",
+                    Title = message,
+                    Status = statusCode,
+                    Detail = "İşlem sırasında bir hata oldu.",
+                    Instance = context.TraceIdentifier
+                };
 
-            await context.Response.WriteAsJsonAsync(problemDetails);
+                context.Response.ContentType = "application/problem+json";
+                context.Response.StatusCode = statusCode;
 
-           
+                await context.Response.WriteAsJsonAsync(problemDetails);
+            }
+
         }
     }
 }
