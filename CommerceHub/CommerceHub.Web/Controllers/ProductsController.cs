@@ -1,4 +1,5 @@
 ﻿using CommerceHub.Web.Data;
+using CommerceHub.Web.Exceptions;
 using CommerceHub.Web.Features.DataTransferObjects;
 using CommerceHub.Web.Features.Products.Commands.CreateNewProduct;
 using CommerceHub.Web.Features.Products.Queries.GetAllProducts;
@@ -105,6 +106,10 @@ namespace CommerceHub.Web.Controllers
         public async Task<IActionResult> GetById(int id)
         {
             var product = await _productService.GetProduct(id);
+            if (product is null)
+            {
+                throw new NotFoundException($"{id} id'li bir ürün bulunamadı");
+            }
             return Ok(product);
         }
 

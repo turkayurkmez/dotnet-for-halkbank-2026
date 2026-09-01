@@ -34,10 +34,19 @@ namespace CommerceHub.Web.Middleware
                 _ => (StatusCodes.Status500InternalServerError,"Bilinmeyen bir hata oluştu")
             };
 
-            context.Response.ContentType = "application/json";
+            var problemDetails = new ProblemDetails
+            {
+                Type = "about:blank",
+                Title = message,
+                Status = statusCode,
+                Detail = "İşlem sırasında bir hata oldu.",
+                Instance = context.TraceIdentifier
+            };
+
+            context.Response.ContentType = "application/problem+json";
             context.Response.StatusCode = statusCode;
 
-            await context.Response.WriteAsJsonAsync(new { error = message });
+            await context.Response.WriteAsJsonAsync(problemDetails);
 
            
         }
