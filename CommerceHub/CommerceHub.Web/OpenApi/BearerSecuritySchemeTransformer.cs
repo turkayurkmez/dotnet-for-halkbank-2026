@@ -40,7 +40,7 @@ namespace CommerceHub.Web.OpenApi
             foreach (var operation in document.Paths.Values.SelectMany(p => p.Operations.Values))
             {
                 operation.Security ??= new List<OpenApiSecurityRequirement>();
-                operation.Security!.Add(new OpenApiSecurityRequirement
+                operation.Security.Add(new OpenApiSecurityRequirement
                 {
                     [schemeReference] = new List<string>()
                 });

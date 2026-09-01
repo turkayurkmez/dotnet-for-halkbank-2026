@@ -1,4 +1,4 @@
-# CommerceHub — .NET 10 Eğitim Projesi
+﻿# CommerceHub — .NET 10 Eğitim Projesi
 
 Bu proje, Halkbank 2026 .NET Eğitimi kapsamında **ASP.NET Core** ve **.NET 10** teknolojilerini öğrenmek amacıyla oluşturulmuş örnek bir ticaret uygulamasıdır.
 
@@ -897,4 +897,23 @@ Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 - **Scalar** (modern API istemcisi)
 - **Microsoft.Extensions.Options**
 - **Microsoft.Extensions.Logging**
+- **Serilog** (yapılandırılmış loglama — Console, File, Seq)
 - **Microsoft.Extensions.DependencyInjection**
+
+
+---
+
+## 🧪 Testler
+
+Çözüm, `CommerceHub.Tests` adında bağımsız bir **xUnit** test projesi içermektedir.
+
+```bash
+dotnet test
+```
+
+| Test Sınıfı | Kapsam |
+|---|---|
+| `CreateProductCommandHandlerTests` | `CreateProductCommandHandler` — `AddAsync` çağrısı ve `ProductCreatedNotification` yayımlanması |
+| `UnitTest1` | Yer tutucu test |
+
+**Kullanılan test kütüphaneleri:** xUnit, Moq, FluentAssertions
