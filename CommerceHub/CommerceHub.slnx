@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="CommerceHub.Tests/CommerceHub.Tests.csproj" Id="74fd044b-91d4-4fdf-ba12-00fccc1c8134" />
   <Project Path="CommerceHub.Web/CommerceHub.Web.csproj" />
 </Solution>
